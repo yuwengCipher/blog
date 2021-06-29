@@ -1,11 +1,3 @@
----
-title: 弄懂 event loop
-date: 2021-04-03
-categories:
- - 异步编程
-tags:
-- Event Loop
----
 
 #### 什么是 event loop
 简单来说，event loop 就是 JavaScript 宿主处理事件执行的一种机制。

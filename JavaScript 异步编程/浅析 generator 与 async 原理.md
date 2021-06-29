@@ -1,33 +1,33 @@
 
-#### 序言
+## 序言
 
 geneartor 和 async 都是 js 处理异步操作发展历程的产物，它们让异步编程越来越像同步编程。但是由于采用新的语法、关键字，它们是如何做到“类同步”操作的，我们不得而知，因此这篇文章将会窥探内部的秘密。
 
 下面将借助 babel 本地编译示例代码来进行分析。
 
-#### 准备步骤
+## 准备步骤
 
  一、全局安装 regenerator
 
-```
+```js
 npm i regenerator -g
 ```
 
  二、编译 generator
 
-​		命令加上 --include-runtime，可以得到完整的编译代码
+​	命令加上 --include-runtime，可以得到完整的编译代码
 
-```
+```js
 regenerator --include-runtime test.js > test-fill.js
 ```
 
 test-fill.js 就是编译后的代码文件。
 
-#### 解析 generator
+## 解析 generator
 
 现在有如下代码：
 
-```
+```js
 function* genFn() {
     let x = yield 2;
     let y = yield x * 2;
@@ -43,7 +43,7 @@ gen.next() // {value: undefined, done: true}
 
 这是编译后的代码：
 
-```
+```js
 var _marked = /*#__PURE__*/regeneratorRuntime.mark(genFn);
 
 function genFn () {
@@ -80,7 +80,7 @@ console.log(g.next());
 
 wrap 方法第二个参是 mark(genFn) 的值， mark 方法如下：
 
-```
+```js
 var $Symbol = typeof Symbol === "function" ? Symbol : {};
 var iteratorSymbol = $Symbol.iterator || "@@iterator";
 
@@ -113,7 +113,7 @@ exports.mark = function (genFun) {
 
 也就是说 mark 方法返回一个拥有 Iterator 接口 genFun。现在看下 wrap 方法。
 
-```
+```js
 function wrap (innerFn, outerFn, self, tryLocsList) {
 	// 确保 protoGenerator 拥有 Itrator 接口
 	var protoGenerator = outerFn && outerFn.prototype instanceof Generator ? outerFn : Generator;
@@ -137,7 +137,7 @@ function makeInvokeMethod (innerFn, self, context) {
 
 先看看 _invoke 在哪儿调用
 
-```
+```js
 var Gp = GeneratorFunctionPrototype.prototype = Generator.prototype
 
 defineIteratorMethods(Gp);
@@ -163,7 +163,7 @@ function defineIteratorMethods (prototype) {
 
 到这里就可以去看看 invoke 是如何实现的
 
-```
+```js
 
 // 四种状态：开始、执行中、暂停执行、结束
 var GenStateSuspendedStart = "suspendedStart";
@@ -230,13 +230,13 @@ return function invoke (method, arg) {
 
 invoke 通过调用的方法进行不同的操作。遇到  throw 直接 throw 错误；遇到 return 会去 complete generator；遇到 next，就会调用 genFn$ 方法，最终返回一个 value 和 done 属性的对象。
 
-#### 解析 async
+## 解析 async
 
 对于 async 函数，依然使用上面的方法进行编译处理。async 编译后的代码与 generator 编译后的 regeneratorRuntime 对象是一样的，因此我们只需要关注不同点就可以了。
 
 编译前
 
-```
+```js
 const p = () => new Promise((resolve, reject) => {
     setTimeout(() => {
         resolve(2)
@@ -257,7 +257,7 @@ asyncFn();
 
 编译后
 
-```
+```js
 var p = function () {
 	return new Promise(function (resolve, reject) {
 		setTimeout(function () {
@@ -305,7 +305,7 @@ asyncFn();
 
 按照顺序，先来看看 async 方法。
 
-```
+```js
 exports.async = function (innerFn, outerFn, self, tryLocsList, PromiseImpl) {
 	// 确保 PromiseImpl 是 Promise
     if (PromiseImpl === void 0) PromiseImpl = Promise;
@@ -326,7 +326,7 @@ exports.async = function (innerFn, outerFn, self, tryLocsList, PromiseImpl) {
 
 new AsyncIterator 内部做了些什么工作呢？简化之后就很明了。
 
-```
+```js
 function AsyncIterator (generator, PromiseImpl) {
     function invoke (method, arg, resolve, reject) {}
     
@@ -346,7 +346,7 @@ function AsyncIterator (generator, PromiseImpl) {
 
 defineIteratorMethods 方法将 next(还有 throw、return) 方法代理给了 _invoke，所以 iter.next() 会调用 _invoke，即 enqueue，而 enqueue 返回一个 promise 实例，因此可以调用 then 方法。
 
-```
+```js
 iter.next().then(function (result) {   
     return result.done ? result.value : iter.next();
 })
@@ -356,7 +356,7 @@ iter.next().then(function (result) {
 
 首先执行 iter.next()，相当于执行  enqueue，进而执行 invoke。
 
-```
+```js
 function invoke (method, arg, resolve, reject) {
     var record = tryCatch(generator[method], generator, arg);
     if (record.type === "throw") {
@@ -400,13 +400,13 @@ function invoke (method, arg, resolve, reject) {
 
 ![babel 编译 async&generator](https://coding-pages-bucket-3560923-8733773-16868-593524-1259394930.cos-website.ap-hongkong.myqcloud.com/blogImgs/babel_编译_async_generator.png)
 
-#### 实现一个简版 async
+## 实现一个简版 async
 
 通过上面的分析，我们可以知道，async 就是一个不需要手动执行 next 方法的 generator，明白了这点就好动手了。
 
 先上一个示例
 
-```
+```js
 function fakeReadFile (filename, duration) {
     return new Promise((resolve, reject) => {
         setTimeout(() => {
@@ -448,7 +448,7 @@ console.log(g.next())
 
 先来实现自动调用，首先想到的是声明一个方法，在里面去执行 next 方法，然后递归调用。
 
-```
+```js
 function asyncFn (genFn) {
     function invokeNext (generator) {
         // 在这里执行 next 方法
@@ -485,7 +485,7 @@ function* genFn_ () {
 
 js 处理异步操作有多种方式，除了 generator 和 async，我们还有 promise，所以考虑用 promise 来管理每个 next 的调用顺序，事情就变得简单了，完整代码如下：
 
-```
+```js
 function asyncFn (genFn) {
     function invokeNext (generator) {
         return new Promise((resolve, reject) => {

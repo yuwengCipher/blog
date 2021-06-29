@@ -2,25 +2,25 @@
 一直以来，对于 promise，只知道如何使用，其内部的运作机制却不得而知。本着知其然，知其所以然（为了让自己用得安心）的理念，决定跟着规范去了解底层的原理，并手写一个功能完备的 MyPromise.
 
 
-#### 术语
+## 术语
 
 - promise 是一个对象或者函数，拥有 then 方法
 - thenable 可以理解为一个拥有 then 方法的对象或函数
 - value 是一个合法的 JavaScript值
 - reason 用来表示 promise 拒绝的原因
 
-#### 特点
+## 特点
 
 - promise 初始状态为 pending，可以转变成 fulfilled 或者 rejected
 - 如果状态是 fulfilled，则不能转变为 rejected 或者 pending。rejected 同理。
 
-#### 实现
+## 实现
 
 下面开始尝试第一版：
 
 平时都是通过 new 来创建一个 promise 实例：
 
-```
+```js
 const p = new Promise((resolve, reject) => {
     // do something
     resolve('xxx')
@@ -29,7 +29,7 @@ const p = new Promise((resolve, reject) => {
 
 于是首先创建一个 promise 构造函数，接收一个方法 executor 作为参数, 在内部直接执行，并且传入两个方法以供使用者使用。
 
-```
+```js
 function MyPromise(executor) {
     const resolve = () => {}
     const reject = () => {}
@@ -40,7 +40,7 @@ function MyPromise(executor) {
 
 如果调用 resolve 方法，会将 Promise实例 状态转变成 fulfilled，如果调用 reject 方法，则会将 Promise 实例状态转变成 rejected。所以接下来给 MyPromise 构造函数添加相应属性，并实现 resolve 和 reject。
 
-```
+```js
 function MyPromise(executor) {
     this.status = 'pending';
     this.value = null;
@@ -67,7 +67,7 @@ function MyPromise(executor) {
 
 构造函数建造完毕，现在来处理最主要的部分 then 方法，这也是规范给出详细标准的一部分。
 
-```
+```js
 // 可以接收两个方法作为参数, 在内部可以根据 MyPromise 实例的状态进行相应的操作
 MyPromise.prototype.then = function(onFulfilled, onRejected) {
     
@@ -87,8 +87,7 @@ MyPromise.prototype.then = function(onFulfilled, onRejected) {
 
 当 then 执行的时候，如果 status 是 fulfilled 或者 rejected 状态，可以直接执行 onFulfilled 或者 onRejected 方法，但如果依然还是 pending，需要将这些执行操作放入等待区，也就是存入到回调队列中，如下：
 
-```
-
+```js
 MyPromise.prototype.then = function(onFulfilled, onRejected) {
     if (this.status === 'pending') {
         this.onFulfilledStack.push(() => {
@@ -111,7 +110,7 @@ MyPromise.prototype.then = function(onFulfilled, onRejected) {
 
 那么现在，待执行栈已经存在了状态改变的回调，需要在合适的时机去执行，所以需要完善 resolve 和 reject 方法。一旦状态改变，则将带执行栈中的回调全部执行。
 
-```
+```js
 const resolve = (value) => {
     this.status = 'fulfilled';
     this.value = value;
@@ -132,7 +131,7 @@ const reject = (reason) => {
 
 我们都知道then 方法必须返回一个 promise，因此需要对 then 方法进一步改造：
 
-```
+```js
 MyPromise.prototype.then = function(onFulfilled, onRejected) {
     // ...
     return new Promise((resolve, reject) => {
@@ -143,7 +142,7 @@ MyPromise.prototype.then = function(onFulfilled, onRejected) {
 
 到这里就要思考一下，then 方法为什么要返回一个 promise？ 原因是每一个 promise 都会有一个 then 方法，而如果 then 方法也返回一个 promise，那么这个 then 也会有一个 then 方法，于是可以像下方代码一样链式调用 ：
 
-```
+```js
 new MyPromise((resolve, reject) => {
     resolve('success')
 }).then().then()
@@ -151,7 +150,7 @@ new MyPromise((resolve, reject) => {
 
 但还有个原因。我们不仅可以像上方一样 resolve 一个基本值，也可以 resolve 一个 promise，如下方例子：
 
-```
+```js
 new MyPromise((resolve, reject) => {
     resolve(new MyPromise((_resolve, _reject) => {
         setTimeout(() => {
@@ -163,7 +162,7 @@ new MyPromise((resolve, reject) => {
 
 因为被 resolve 的 promise 的状态是尚未改变的，因此可以将这个 promise 放进 then 返回的这个 promise 内去等待状态改变，所以这一步我们将 then 方法内原先的处理逻辑挪到这个返回的 promise 内部。
 
-```
+```js
 MyPromsise.prototype.then = function(onFulfilled, onRejected) {
     let _promise = null;
     return _promise = new MyPromise((resolve, reject) => {
@@ -191,7 +190,7 @@ MyPromsise.prototype.then = function(onFulfilled, onRejected) {
 
 有个问题，我们在内部直接调用 onFulfilled 和 onRejected，但却没有对这两个方法类型进行错误处理，也就是必须保证它们是 function。
 
-```
+```js
 MyPromsise.prototype.then = function(onFulfilled, onRejected) {
     // 设置默认的回调方法（需原样返回传进来的值或者抛出同样的值），可以保证 promise 结果能够透传
     onFulfilled = typeof onFulfilled === 'function' ? onFulfilled : value => value;
@@ -202,7 +201,7 @@ MyPromsise.prototype.then = function(onFulfilled, onRejected) {
 
 这里有一个处理，如果 onFulfilled 和 onRejected 不是 function，那么就将它们赋值成方法，并且将接收到的值进行相应处理：如果是 onFulfilled，直接将值 return，如果是 onRejected, 主动抛出一个错误。这也就实现了 promise 值的透传
 
-```
+```js
 new MyPromise((resolve, reject) => {
     resolve('success')
 }).then().then((value) => {
@@ -218,7 +217,7 @@ new MyPromise((resolve, reject) => {
 
 接下来对 then 方法进行进一步完善, 将它们的执行丢到异步环境中
 
-```
+```js
 MyPromsise.prototype.then = function(onFulfilled, onRejected) {
     // ...
     let _promise = null;
@@ -258,42 +257,42 @@ MyPromsise.prototype.then = function(onFulfilled, onRejected) {
 
 改动如下：
 
-```
-    if (this.status === 'pending') {
-        this.onFulfilledStack.push(() => {
-            setTimeout(() => {
-                let x = onFulfilled(this.value);
-                resolvePromise(_promise, x, resolve, reject)
-            })
-        })
-        this.onRejectedStack.push(() => {
-            setTimeout(() => {
-                let x = onRejected(this.reason);
-                resolvePromise(_promise, x, resolve, reject)
-            }) 
-        })
-    }
-
-    if (this.status === 'fulfilled') {
+```js
+if (this.status === 'pending') {
+    this.onFulfilledStack.push(() => {
         setTimeout(() => {
             let x = onFulfilled(this.value);
             resolvePromise(_promise, x, resolve, reject)
         })
-    }
-    
-    if (this.status === 'rejected') {
+    })
+    this.onRejectedStack.push(() => {
         setTimeout(() => {
             let x = onRejected(this.reason);
             resolvePromise(_promise, x, resolve, reject)
-        })
-    }
+        }) 
+    })
+}
+
+if (this.status === 'fulfilled') {
+    setTimeout(() => {
+        let x = onFulfilled(this.value);
+        resolvePromise(_promise, x, resolve, reject)
+    })
+}
+
+if (this.status === 'rejected') {
+    setTimeout(() => {
+        let x = onRejected(this.reason);
+        resolvePromise(_promise, x, resolve, reject)
+    })
+}
 ```
 
 接下来就是实现 resolvePromise 方法了。
 
 按照规范 2.3 The Promise Resolution Procedure，一步步实现：
 
-```
+```js
 function resolvePromise(_promise, x, resolve, reject){
     // 2.3.1 如果 _promise 和 x 是同一个对象，reject TypeError
     if (x === _promise) {
@@ -357,7 +356,7 @@ function resolvePromise(_promise, x, resolve, reject){
 
 接收一个值，在内部创建一个新的实例，将状态交给新实例去处理
 
-```
+```js
 MyPromise.prototype.resolve = function(value) {
     return new MyPromise((resolve, reject) => {
         resolve(value)
@@ -365,13 +364,11 @@ MyPromise.prototype.resolve = function(value) {
 }
 ```
 
-\#发
-
 **MyPromise.catch**
 
 接收一个方法，只会在 rejected 状态下执行
 
-```
+```js
 MyPromise.prototype.catch = function (callback) {
     return this.then(null, callback);
 }
@@ -381,7 +378,7 @@ MyPromise.prototype.catch = function (callback) {
 
 接收一个方法，不论 fulfilled 或者 rejected 都会执行
 
-```
+```js
 MyPromise.prototype.finally = function (callback) {
     return this.then(callback, callback);
 }
@@ -391,7 +388,7 @@ MyPromise.prototype.finally = function (callback) {
 
 接收一个数组，只有所有项的状态为 fulfilled，最终结果才为 fulfilled，如果有一个 rejected，那么结果就是 rejected
 
-```
+```js
 MyPromise.prototype.all = function (promiseArr) {
     return new MyPromise((resolve, reject) => {
         let result = [];
@@ -416,7 +413,7 @@ MyPromise.prototype.all = function (promiseArr) {
 
 接收一个数组，结果由第一个状态改变的 thenable 决定
 
-```
+```js
 MyPromise.prototype.race = function (promiseArr) {
     return new MyPromise((resolve, reject) => {
         promiseArr.forEach((currentPromise, index) => {
@@ -434,7 +431,7 @@ MyPromise.prototype.race = function (promiseArr) {
 
 接收一个数组，只有等到所有项的状态都改变了，不论是 fulfilled 还是 rejected，都只会变成 fulfilled
 
-```
+```js
 MyPromise.prototype.allSettled = function(promiseArr) {
     return new Promise((resolve, reject) => {
         let resultArr = [];
@@ -459,7 +456,7 @@ MyPromise.prototype.allSettled = function(promiseArr) {
 
 接收一个数组，如果其中有一项的状态为 fulfilled， 那么结果就是 fulfilled，否则如果所有都是 rejected，那结果就是 rejected， 并且 reanson 是 'AggregateError: All promises were rejected'
 
-```
+```js
 MyPromise.prototype.any = function(promiseArr) {
     return new Promise((resolve, reject) => {
         let rejectCount = 0;
@@ -481,13 +478,13 @@ MyPromise.prototype.any = function(promiseArr) {
 
 \#安装 promises-aplus-tests
 
-```
+```js
 npm i promises-aplus-tests -g
 ```
 
 \#在代码里加上这段
 
-```
+```js
 MyPromise.deferred = function () {
     const defer = {};
     defer.promise = new MyPromise((resolve, reject) => {
@@ -500,7 +497,7 @@ MyPromise.deferred = function () {
 
 \#最后
 
-```
+```js
 promises-aplus-tests promise.js
 ```
 

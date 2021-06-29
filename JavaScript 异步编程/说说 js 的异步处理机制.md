@@ -1,5 +1,5 @@
 
-#### 什么是异步
+## 什么是异步
 
 在 JavaScript 中和生活中都会有异步任务的存在，而异步的产生是有前提条件的，那就是这个任务可以被拆解成两部分。
 
@@ -7,19 +7,19 @@
 
 所以这个喝汤任务由两个步骤组成：煲汤 + 喝汤；这个喝汤步骤就是异步的
 
-#### 设计成异步的原因
+## 设计成异步的原因
 
 从上面可以知道，如果我傻傻的在锅前等3个小时，那么我看电视、嗑瓜子等事情就得向后延3小时，到最后我这一天做不了什么，所以傻等3小时完全是浪费时间。
 
 js 是单线程，同一时间只能做一件事，长时间的等待势必会造成资源的浪费
 
-#### 异步实现方案
+## 异步实现方案
 
 - 回调函数
 
 回调函数在 js 代码里随处可见，如给 DOM 添加点击事件
 
-```
+```js
 let d = document.getElementId('test');
 d.addEventListener('click', function callback(e) {
     // do something
@@ -29,7 +29,7 @@ d.addEventListener('click', function callback(e) {
 
 node 里去读取一份文件
 
-```
+```js
 fs.readFile('./test.text', function callback(err, data){
     // do something
 })
@@ -37,7 +37,7 @@ fs.readFile('./test.text', function callback(err, data){
 
 但是有时候的需求会比较复杂，加入多个任务存在依赖性，就会写出如下代码：
 
-```
+```js
 fs.readFile('./test.text', function callback(err, data){
     fs.readFile('./test1.text', function callback1(err, data){
         fs.readFile('./test2.text', function callback2(err, data){
@@ -53,7 +53,7 @@ fs.readFile('./test.text', function callback(err, data){
 
 幸运的是后来有了 promise，带我们逃离了“回调地狱”，来到新世界：
 
-```
+```js
 new Promise((resolve, reject) => {
     fs.readFile('./test.text', function callback(err, data){
         resolve(data);
@@ -77,7 +77,7 @@ new Promise((resolve, reject) => {
 
 但是你一定见过这样的代码：
 
-```
+```js
 new Promise((resolve, reject) => {
     fs.readFile('./test.text', function callback(err, data){
         resolve(data);
@@ -104,7 +104,7 @@ new Promise((resolve, reject) => {
 
 generator 函数与普通的函数不同，函数内的代码可以分段执行，也就是说可以暂停执行，凡是需要暂停的地方用 yield 关键字注明。具体用法参考阮老师文章的介绍 http://www.ruanyifeng.com/blog/2015/04/generator.html
 
-```
+```js
 function* genFn() {
     let x = yield 2;
     let y = yield x * 2;
@@ -118,7 +118,7 @@ gen.next() // {value: undefined, done: true}
 
 于是对于上面依次读取文件的例子可以改写成如下形式：
 
-```
+```js
 // 模拟文件请求
 function fakeReadFile(filename, duration) {
     setTimeout(() => {
@@ -147,7 +147,7 @@ gen.next();
 
 可以看到我需要在文件请求完成之后手动调用 next 方法，因此在实际工作中，我们通常需要将 generator 函数包裹在一个函数内：
 
-```
+```js
 function callGen() {
     function* genFn() {
         yield fakeReadFile('a.txt', 5000, gen);
@@ -177,7 +177,7 @@ callGen();
 
 我们按照 async 方法的用法来继续优化上面的例子：
 
-```
+```js
 function fakeReadFile(filename, duration, g) {
     // 因为 await 关键字后面需要接收一个 promise
     return new Promise((resolve, reject) => {
@@ -206,7 +206,7 @@ asyncFn();
 
 需要注意的是如果 await 后面表达式里包含异步操作但返回的不是 promise，那么就就不会等待到结果返回，比如这样修改：
 
-```
+```js
 function fakeReadFile(filename, duration, g) {
     if (filename === 'a.txt') {
         setTimeout(() => {
@@ -238,14 +238,14 @@ asyncFn();
 
 也就是说第一个 await 没有阻塞 console.log(a) 的执行。因此 async 对 await 后面的表达式又两种处理方式：
 
-```
+```js
 1. promise
    async 会执行表达式并等待有返回值才会继续往下执行代码
 2. 非 promise
    async 执行表达式并立刻获取返回值，如果没有则为 undefined
 ```
 
-#### 总结
+## 总结
 
 js 处理异步的方法经历了 回调函数、promise、generator、async 这四个阶段，每一种新方法都是对前方法的改善，主要处理的点有两点：
 

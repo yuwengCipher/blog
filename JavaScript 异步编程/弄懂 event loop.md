@@ -1,5 +1,5 @@
 
-#### 什么是 event loop
+## 什么是 event loop
 简单来说，event loop 就是 JavaScript 宿主处理事件执行的一种机制。
 
 js 以前是专门用来处理浏览器交互的，比如说 DOM 点击事件等，因此被设计成单线程，所谓单线程，就是同一时间只能处理一件事情，这也就保证了页面中一次只能处理一个事件，避免造成交互混乱的问题。
@@ -8,7 +8,7 @@ js 以前是专门用来处理浏览器交互的，比如说 DOM 点击事件等
 
 现在有事件 A 和 B，如下：
 
-```
+```js
 const A = function A() {
     setTimeout(() => {
         console.log('i am A');
@@ -24,19 +24,19 @@ B();
 ```
 按照单线程的要求，需要等到 A 执行完毕，才会执行 B，那么打印顺序会是如下所示：
 
-```
+```js
 console.log('i am A');
 console.log('i am B');
 ```
 但实际上的顺序是：
 
-```
+```js
 console.log('i am B');
 console.log('i am A');
 ```
 这就是 event loop 机制在起作用，因为 console.log('i am B') 是同步任务，而 setTimeout 是异步任务，同步任务执行完才会去执行异步任务
 
-#### 宏任务和微任务
+## 宏任务和微任务
 
 - 什么是宏任务和微任务？
 
@@ -63,7 +63,7 @@ js 执行的宿主环境有浏览器和 Node,  所以我们通过宿主环境的
 - 宏任务和微任务的执行顺序
 
 要点一：一个宏任务里可能会包含多个微任务
-```
+```js
  new Promise((resolve, reject) => {
      console.log('我是 promise 里的 同步任务')
      resolve('success')
@@ -90,13 +90,13 @@ js 执行的宿主环境有浏览器和 Node,  所以我们通过宿主环境的
 3. 执行 setTimeout 的回调
 
 即：
-```
+```js
 // console.log('我是 promise 里的 同步任务')
 // console.log('我是微任务1')
 // console.log('我是微任务2')
 // console.log('我是 setTimeout 里的 宏任务')
 ```
-#### 浏览器下的 event loop
+## 浏览器下的 event loop
 ![浏览器 event loop](https://coding-pages-bucket-3560923-8733773-16868-593524-1259394930.cos-website.ap-hongkong.myqcloud.com/blogImgs/浏览器_event_loop.png)
 
 如图所示，代码执行步骤如下：
@@ -111,7 +111,7 @@ js 执行的宿主环境有浏览器和 Node,  所以我们通过宿主环境的
 
 看一个简单例子感受下：
 
-```
+```js
 setTimeout(function callback1(){console.log(3)})
 
 Promise.resolve('success')
@@ -131,9 +131,9 @@ console.log('start')
 4. 执行完同步任务，将微任务队列里的任务一次性执行
 5. 微任务执行完之后，执行宏任务队列的第一个任务
 
-#### node 下的 event loop
+## node 下的 event loop
 
-```
+```js
    ┌───────────────────────────┐                             
 ┌─>│           timers          │
 │  └─────────────┬─────────────┘
@@ -164,10 +164,10 @@ console.log('start')
 
 下面主要对 timers、poll、check 三个阶段进行解析：
 
-##### 一、timers
+### 一、timers
 timers 阶段的回调函数可能并不会按照设定的时间延迟去执行，因为 event loop 初始化或者其他阶段回调函数的长时间执行会延迟它们的执行。
 
-```
+```js
 const fs = require('fs');
 
 function someAsyncOperation(callback) {
@@ -195,7 +195,7 @@ someAsyncOperation(() => {
 3. idle 忽略
 4. poll 阶段：因为此时有 I/O 操作，因此会阻塞在这里，等待95ms至文件读取结束，然后将 callback 放入队列进行执行，耗时10ms。调用结束后，当前队列为空，检查 timers，发现设定时间为95ms，当前运行时间超时了，因此进入 timer 阶段执行回调，所以会打印出"105ms has passed since I was scheduled"
 
-#####  二、poll
+###  二、poll
 poll 阶段主要有两个功能：
 
 1.计算它应该阻塞和轮询 I/O 多长时间
@@ -214,13 +214,13 @@ poll 阶段主要有两个功能：
 - 一旦 poll 队列处于空闲状态，event loop 会查看 timers 里的回调函数，如果至少有一个回调函数的时间到了，event loop 会按循环顺序进入 timers 阶段去执行这些回调函数。
 - 按循环顺序说的是 event loop 不会直接进入 timers 阶段，而是要先进入 check、close callback 之后，再进入 timers 阶段。
 
-##### 三、check
+### 三、check
 
 - 这个阶段用来存放 setImmediate 回调函数，如果代码中设定了，那么 event loop 不会阻塞等待在 poll 阶段，而是会进入 check 阶段。
 - 当 poll 阶段结束，进入check 阶段后，会调用 libuv api 去执行回调函数
 
 
-##### 四、API 比较
+### 四、API 比较
 - setTimeout 和 setImmediate
     1.  setTimeout 设定一个任务在等待指定时间后去执行
     2.  setImmediate 在 poll 阶段完成后立即去调用它设定的代码
@@ -231,7 +231,7 @@ poll 阶段主要有两个功能：
 
 在技术上来说，nextTick 不属于 event loop 的一部分，凡是放进 nextTick 队列的回调函数会在下一次 event loop 循环开始前执行。需要注意的是，正是因为这个特性，如果递归调用 nextTick，会导致下一次 event loop 无法开始。
 
-##### node 中宏任务和微任务
+### node 中宏任务和微任务
 
 因为 node 中的 宏任务分处于不同的阶段，并且微任务中的 process.nextTick 都是先于其它微任务执行，所以可以理解为 有4个宏任务队列以及2个微任务队列。
 
@@ -244,7 +244,7 @@ poll 阶段主要有两个功能：
 1. node 中的宏任务队列执行顺序取决于 event loop 所处的阶段
 2. 微任务中，process.nextTick 独处一个队列，比其他微任务要早执行
 
-#### 总结
+## 总结
 
 event loop 相当于一个总指挥，负责 js 任务的协调与调度。
 

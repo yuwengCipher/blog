@@ -344,7 +344,7 @@ function AsyncIterator (generator, PromiseImpl) {
 }
 ```
 
-defineIteratorMethods 方法将 next(还有 throw、return) 方法代理给了 _invoke，所以 iter.next() 会调用 _invoke，即 enqueue，而 enqueue 返回一个 promise 实例，因此可以调用 then 方法。
+defineIteratorMethods 方法将 next(还有 throw、return) 方法代理给了 _invoke，所以 iter.next() 会调用_invoke，即 enqueue，而 enqueue 返回一个 promise 实例，因此可以调用 then 方法。
 
 ```js
 iter.next().then(function (result) {   
@@ -387,7 +387,7 @@ function invoke (method, arg, resolve, reject) {
 执行步骤如下：
 
 1. var record = tryCatch(generator[method], generator, arg);
-   1. 因为 generator[method] 代理给了 _invoke。因此会执行 return { type: "normal", arg: *fn*.call(*obj*, *arg*) };所以这里的 _invoke 是 generator 的 _invoke，而不是 iter 的 _invoke。
+   1. 因为 generator[method] 代理给了 _invoke。因此会执行 return { type: "normal", arg: *fn*.call(*obj*, *arg*) };所以这里的_invoke 是 generator 的 _invoke，而不是 iter 的_invoke。
    2. 接下来执行 _invoke 的步骤与 generator 函数一样，执行被包裹的函数，最终会返回 {value: xx, done: xx} 对象，但不一样的是，如果函数体没有执行完毕之前，value 是一个对象，有一个 __await 属性。
 2. 如果 tryCatch 执行失败，则直接 reject。
 3. 如果执行成功：
@@ -513,4 +513,3 @@ function asyncFn (genFn) {
     invokeNext(g)
 }
 ```
-

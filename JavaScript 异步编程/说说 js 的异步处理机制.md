@@ -102,7 +102,7 @@ new Promise((resolve, reject) => {
 
 - generator
 
-generator 函数与普通的函数不同，函数内的代码可以分段执行，也就是说可以暂停执行，凡是需要暂停的地方用 yield 关键字注明。具体用法参考阮老师文章的介绍 http://www.ruanyifeng.com/blog/2015/04/generator.html
+generator 函数与普通的函数不同，函数内的代码可以分段执行，也就是说可以暂停执行，凡是需要暂停的地方用 yield 关键字注明。具体用法参考阮老师文章的介绍 <http://www.ruanyifeng.com/blog/2015/04/generator.html>
 
 ```js
 function* genFn() {

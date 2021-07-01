@@ -1,5 +1,6 @@
 
 ## 什么是 event loop
+
 简单来说，event loop 就是 JavaScript 宿主处理事件执行的一种机制。
 
 js 以前是专门用来处理浏览器交互的，比如说 DOM 点击事件等，因此被设计成单线程，所谓单线程，就是同一时间只能处理一件事情，这也就保证了页面中一次只能处理一个事件，避免造成交互混乱的问题。
@@ -22,18 +23,21 @@ const B = function B() {
 A();
 B();
 ```
+
 按照单线程的要求，需要等到 A 执行完毕，才会执行 B，那么打印顺序会是如下所示：
 
 ```js
 console.log('i am A');
 console.log('i am B');
 ```
+
 但实际上的顺序是：
 
 ```js
 console.log('i am B');
 console.log('i am A');
 ```
+
 这就是 event loop 机制在起作用，因为 console.log('i am B') 是同步任务，而 setTimeout 是异步任务，同步任务执行完才会去执行异步任务
 
 ## 宏任务和微任务
@@ -63,6 +67,7 @@ js 执行的宿主环境有浏览器和 Node,  所以我们通过宿主环境的
 - 宏任务和微任务的执行顺序
 
 要点一：一个宏任务里可能会包含多个微任务
+
 ```js
  new Promise((resolve, reject) => {
      console.log('我是 promise 里的 同步任务')
@@ -77,26 +82,30 @@ js 执行的宿主环境有浏览器和 Node,  所以我们通过宿主环境的
      console.log('我是 setTimeout 里的 宏任务')
  })
 ```
+
 我们来分析下这段代码里的宏任务和微任务有哪些：
 宏任务：setTimeout 的回调
 微任务：两个 then 方法的回调
 
 要点二：宏任务是一个一个执行的，而微任务是批量执行的，当前批次微任务没有完成之前，下一个宏任务不会执行
 
-
 因此执行顺序是:
+
 1. 遇到 promise，参数里面的代码是同步的，所有会先执行 console.log('我是 promise 里的 同步任务')
 2. 执行两个 then 方法的回调
 3. 执行 setTimeout 的回调
 
 即：
+
 ```js
 // console.log('我是 promise 里的 同步任务')
 // console.log('我是微任务1')
 // console.log('我是微任务2')
 // console.log('我是 setTimeout 里的 宏任务')
 ```
+
 ## 浏览器下的 event loop
+
 ![浏览器 event loop](https://coding-pages-bucket-3560923-8733773-16868-593524-1259394930.cos-website.ap-hongkong.myqcloud.com/blogImgs/浏览器_event_loop.png)
 
 如图所示，代码执行步骤如下：
@@ -153,6 +162,7 @@ console.log('start')
 └──┤      close callbacks      │
    └───────────────────────────┘
 ```
+
 如上图所示，node 中的 event loop 分为6个循环阶段，当 node.js 启动的时候，会初始化 event loop
 
 - timers： 这个阶段执行 setTimeout 和 setInterval 的回调函数
@@ -165,6 +175,7 @@ console.log('start')
 下面主要对 timers、poll、check 三个阶段进行解析：
 
 ### 一、timers
+
 timers 阶段的回调函数可能并不会按照设定的时间延迟去执行，因为 event loop 初始化或者其他阶段回调函数的长时间执行会延迟它们的执行。
 
 ```js
@@ -189,13 +200,16 @@ someAsyncOperation(() => {
     }
 })
 ```
+
 上方示例在 node 里的大致执行步骤如下：
+
 1. timer 阶段：因为需要延迟 100ms，所以当前没有 callback 需要执行，进入 pending callback 阶段
 2. pending callback阶段：没有 I/O 回调需要执行，进入 idle，
 3. idle 忽略
 4. poll 阶段：因为此时有 I/O 操作，因此会阻塞在这里，等待95ms至文件读取结束，然后将 callback 放入队列进行执行，耗时10ms。调用结束后，当前队列为空，检查 timers，发现设定时间为95ms，当前运行时间超时了，因此进入 timer 阶段执行回调，所以会打印出"105ms has passed since I was scheduled"
 
-###  二、poll
+### 二、poll
+
 poll 阶段主要有两个功能：
 
 1.计算它应该阻塞和轮询 I/O 多长时间
@@ -219,13 +233,12 @@ poll 阶段主要有两个功能：
 - 这个阶段用来存放 setImmediate 回调函数，如果代码中设定了，那么 event loop 不会阻塞等待在 poll 阶段，而是会进入 check 阶段。
 - 当 poll 阶段结束，进入check 阶段后，会调用 libuv api 去执行回调函数
 
-
 ### 四、API 比较
-- setTimeout 和 setImmediate
-    1.  setTimeout 设定一个任务在等待指定时间后去执行
-    2.  setImmediate 在 poll 阶段完成后立即去调用它设定的代码
-    3.  它们回调函数执行的顺序依据它们执行的方式会有不同：如果它们的执行不在 I/O 操作里，那么顺序时不定的，如果在 I/O 中，永远都是 setImmediate 最先执行
 
+- setTimeout 和 setImmediate
+    1. setTimeout 设定一个任务在等待指定时间后去执行
+    2. setImmediate 在 poll 阶段完成后立即去调用它设定的代码
+    3. 它们回调函数执行的顺序依据它们执行的方式会有不同：如果它们的执行不在 I/O 操作里，那么顺序时不定的，如果在 I/O 中，永远都是 setImmediate 最先执行
 
 - process.nextTick
 
@@ -248,4 +261,4 @@ poll 阶段主要有两个功能：
 
 event loop 相当于一个总指挥，负责 js 任务的协调与调度。
 
-参考文献 https://juejin.cn/post/6844903670291628046#heading-5
+参考文献 <https://juejin.cn/post/6844903670291628046#heading-5>

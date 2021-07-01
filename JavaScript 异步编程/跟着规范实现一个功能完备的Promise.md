@@ -1,7 +1,6 @@
 
 一直以来，对于 promise，只知道如何使用，其内部的运作机制却不得而知。本着知其然，知其所以然（为了让自己用得安心）的理念，决定跟着规范去了解底层的原理，并手写一个功能完备的 MyPromise.
 
-
 ## 术语
 
 - promise 是一个对象或者函数，拥有 then 方法
@@ -503,4 +502,4 @@ promises-aplus-tests promise.js
 
 有一点需要注意：我在实现 promise 内部异步执行时采用的是 setTimeout，而 promise 的 then 方法是一个微任务这与实际有出入。不过用于理解其中的异步理念已经足够了。追求完美的同学可自行实现不同的版本。
 
-完整代码地址：https://github.com/yuwengCipher/MyPromise
+完整代码地址：<https://github.com/yuwengCipher/MyPromise>

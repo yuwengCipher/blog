@@ -73,6 +73,27 @@ function baseCompile(template, options) {
 
 这一步将 template 作为字符串进行特定规则分析转换成 AST。
 
+从上面的梳理结果可以看到，真正的 parse 动作从 parse(template.trim(), options) 开始，所以我们从这里开始。
+
+```js
+function parse(template, options) {
+	// 省略代码...
+	var stack = [];
+	var preserveWhitespace = options.preserveWhitespace !== false;
+	var whitespaceOption = options.whitespace;
+	// root 就是最后的 AST 结果
+	var root;
+	var currentParent;
+	var inVPre = false;
+	var inPre = false;
+	var warned = false;
+	// 省略代码...
+	parseHTML(template, {})
+};
+```
+
+核心是 parseHTML 方法. 接受 template 及 options，其中 options 拥有 start、end、chars、comment 方法，分别用来处理开始标签、结束标签、文本字符、注释。
+
 ### transform
 
 这一步通过 AST 生成 render 函数方法

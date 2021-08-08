@@ -473,7 +473,7 @@ Watcher.prototype.run = function run () {
 
 因为当前的 watcher 是 vm，并且是 render watcher，所以新值和旧值都是 'undefined'、watcehr.deep = false，因此不会执行下面的逻辑。
 
-vnode 的所有 props、directives、events 等都存储在 data 中，那么这个 invokeCreateHooks 就是给我们的 dom 润色。
+到这里，computed 所涉及到的方法都有说到，我将他们整理成一张流程图，如下：
 
 ![computed执行流程图](https://coding-pages-bucket-3560923-8733773-16868-593524-1259394930.cos-website.ap-hongkong.myqcloud.com/blogImgs/computed执行流程图.png)
 

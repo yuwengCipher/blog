@@ -35,7 +35,7 @@ computed: {
 }
 ```
 
-找到 initState，这是合并完 options 之后执行的方法，里面会调用 initComputed(vm, opts.computed) 处理 computed，opts 就是合并完成的 options。
+从源码中找到 initState，它是合并完 options 之后执行的方法，里面会调用 initComputed(vm, opts.computed) 处理 computed，opts 就是合并完成的 options。
 
 ```js
 function initComputed (vm, computed) {

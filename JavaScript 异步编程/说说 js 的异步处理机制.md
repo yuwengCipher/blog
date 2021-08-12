@@ -2,9 +2,9 @@
 title: 说说 js 的异步处理机制
 date: 2021-04-01
 categories:
-- JS
+ - JS
 tags:
-- 异步处理
+ - 异步处理
 ---
 
 ## 什么是异步

@@ -3,6 +3,8 @@ title: computed的[怪异]表现
 date: 2021-04-25
 categories:
  - Vue
+tags:
+ - Vue
 ---
 
 ## 前言
@@ -137,7 +139,7 @@ Watcher.prototype.get = function get () {
 };
 ```
 
-首先调用 watcehr.get()，会触发 this.getter.call(vm, vm)，即调用 reversedMessage 方法，将 watcher.value 赋值为 'olleH'; 最后返回 watcher.value 即 'olleH'。那么 render 函数的这部分 [_v("Computed reversed message: \""+_s(reversedMessage)+"\"")]，就变成了 [_v("Computed reversed message: \""+_s("olleH")+"\"")]。这样就实现了 computed 不带()进行使用了，而是在内部去调用 reversedMessage 方法。这个实现有两个关键点：
+首先调用 watcehr.get()，会触发 this.getter.call(vm, vm)，即调用 reversedMessage 方法，将 watcher.value 赋值为 'olleH'; 最后返回 watcher.value 即 'olleH'。那么 render 函数的这部分 [_v("Computed reversed message: \""+_s(reversedMessage)+"\"")]，就变成了 [_v("Computed reversed message: \""+_s("olleH")+"\"")]。这样就实现了 computed 不带()进行使用了，其实是在内部去调用 reversedMessage 方法。这个实现有两个关键点：
 1. 将 computed.reversedMessage 代理给了 vm.rereversedMessage
 2. 使用 object.defineProperty 对 vm.rereversedMessage 进行数据劫持
 
@@ -153,7 +155,7 @@ setTimeout(() => {
 
 然后可以看到，在一秒后改变 message 的值，页面显示从 Computed reversed message: "olleH" 变成了 Computed reversed message: "rehpic"，符合预期，响应式依赖项改变时，computed 也发生了改变。我们来看看这是怎么实现的。
 
-message 作为一个响应式属性，在最开始进行响应式设定的时候，它拥有一个 getter 方法：
+message 作为一个响应式属性，在最开始进行响应式设定的时候，它拥有一个 get 方法：
 
 ```js
 var dep = new Dep();
@@ -178,13 +180,13 @@ get: function reactiveGetter () {
 },
 ```
 
-上面已经说过，在内部会调用 reversedMessage 方法去获取最新的值，而这个值就是 this.message.split('').reverse().join('') 返回的，此时又会触发 message 的 get 方法，即上面那段代码。reversedMessage get 方法触发的时候，会执行 pushTarget(this) 将 Dep.target 设置成 this._computedWatchers['reversedMessage']，执行 dep.depend()，最后执行 dep.addSub(watcher) 将 watcher 存入 dep.subs 数组中，这个 dep 是 message 的监听收集器。
+上面已经说过，在内部会调用 reversedMessage 方法去获取最新的值，而这个值就是 this.message.split('').reverse().join('') 返回的，此时又会触发 message 的 get 方法，即上面那段代码。reversedMessage get 方法触发的时候，会执行 pushTarget(this) 将 Dep.target 设置成 this._computedWatchers['reversedMessage']，执行 dep.depend()，最后就会执行 dep.addSub(watcher) 将 watcher 存入 dep.subs 数组中，这个 dep 是 message 的监听收集器，也就是 message 改变就会通知到 reversedMessage watcher。
 
 综合上面说的步骤，总结方法执行图如下：
 
 ![computed依赖收集](https://coding-pages-bucket-3560923-8733773-16868-593524-1259394930.cos-website.ap-hongkong.myqcloud.com/blogImgs/computed依赖收集.png)
 
-执行完 watcher.evaluate， reversedMessage(watcher) 就被收集到 message 的订阅者集合中了。
+执行完 watcher.evaluate，reversedMessage(watcher) 就被收集到 message 的订阅者集合中了。
 
 1秒之后，this.message 变成 cipher，那么就会去执行 message.set。
 
@@ -266,7 +268,9 @@ Dep.prototype.depend = function depend () {
 };
 ```
 
-将 vm 存入 message 的 dep.subs 中，此时，dep.subs = [reversedMessage, vm]。到这里初始化操作结束了，页面显示为 Computed reversed message: "olleH"。1秒之后进行 message 的更改操作，重新执行 notify 方法，依旧会在 update 这里终止，不会去执行更新 reversedMessage... 这不是又重走老路子而且还是走不通的？并不是的，这次跟上次不同了，这次 dep.subs 中新增了一个 vm 的 watcher，所以执行完 reversedMessage 的 update，接着会执行 vm 的 update 方法。
+将 vm 存入 message 的 dep.subs 中，此时，dep.subs = [reversedMessage, vm]。到这里初始化操作结束了，页面显示为 Computed reversed message: "olleH"。
+
+1秒之后进行 message 的更改操作，重新执行 notify 方法，reversedMessage update 依旧不会去执行更新 reversedMessage... 这不是又重走老路子而且还是走不通的？其实不然，因为这次跟上次不同了，这次 dep.subs 中新增了一个 vm 的 watcher，所以执行完 reversedMessage 的 update，接着会执行 vm 的 update 方法。
 
 因为 vm.lazy 和 vm.sync 都是 false，所以会走第三分支，执行 queueWatcher(this)
 
@@ -439,7 +443,7 @@ function flushSchedulerQueue () {
 - 执行 activated 和 updated 钩子。
 - 开发模式下触发 devtools flush 事件
 
-watcher.run：
+来看看 watcher.run：
 
 ```js
 Watcher.prototype.run = function run () {
@@ -466,7 +470,7 @@ Watcher.prototype.run = function run () {
 
 首先执行 this.get()，触发 this.getter 方法执行，getter 就是 updateComponent，也就是说会重新走 render -> update 过程。而就是在 render 过程里，会重新走 message 的依赖收集过程，执行 this.reversedMessage() 更新 reversedMessage 的值。
 
-然后依据条件执行下方逻辑，执行的条件可以是三种种的一种：
+然后依据条件执行接下来的逻辑，执行的条件可以是三种种的一种：
 1. 新值与旧值不相等
 2. value 是对象，因为有可能新值与旧值相等，但是值可能被更新过
 3. watcher.deep = true
@@ -520,7 +524,7 @@ computed:{
 
 我们看上面 computed 执行流程图，_render() 执行会触发 _s(this.reverseMessage)，进而触发计算，调用方法，但是现在我没有在模板中使用，那么在 render 函数中就不会有 _s(this.reverseMessage)，也就不会有后续的计算操作了，因此 computed 方法不会执行。但是为什么在 mounted 中使用 this.reversedMessage() 会报错，而使用 this.reversedMessage 却可以正常使用？
 
-this.reversedMessage 触发 reversedMessage 的 getter，跟上面提到的执行步骤是一样的，所以会执行 reversedMessage 方法。也就是说 this.reversedMessage() 相当于是 this.reversedMessage()()，this.reversedMessage() 执行完后的值不是方法，所以后面接() 就会报错。
+this.reversedMessage 触发 reversedMessage 的 getter，跟上面提到的执行步骤是一样的，所以会执行 reversedMessage 方法。也就是说 this.reversedMessage() 相当于是 this.reversedMessage()()，this.reversedMessage() 执行完后的值不是方法，所以后面接 () 使用就会报错。
 
 ## 结语
 

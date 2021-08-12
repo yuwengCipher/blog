@@ -3,6 +3,8 @@ title: 模板怎么变成真实DOM
 date: 2021-04-19
 categories:
  - Vue
+tags:
+ - Vue
 ---
 
 ## 前言
@@ -144,6 +146,33 @@ let match = {
 
 弄清楚了 match 的内容，就可以继续去看看 handleStartTag 方法了。我们主要看后半部分的逻辑。
 
+```js
+for (var i = 0; i < l; i++) {
+	var args = match.attrs[i];
+	var value = args[3] || args[4] || args[5] || '';
+	var shouldDecodeNewlines = tagName === 'a' && args[1] === 'href'
+		? options.shouldDecodeNewlinesForHref
+		: options.shouldDecodeNewlines;
+	attrs[i] = {
+		name: args[1],
+		value: decodeAttr(value, shouldDecodeNewlines)
+	};
+	if (options.outputSourceRange) {
+		attrs[i].start = args.start + args[0].match(/^\s*/).length;
+		attrs[i].end = args.end;
+	}
+}
+
+if (!unary) {
+	stack.push({ tag: tagName, lowerCasedTag: tagName.toLowerCase(), attrs: attrs, start: match.start, end: match.end });
+	lastTag = tagName;
+}
+
+if (options.start) {
+	options.start(tagName, attrs, unary, match.start, match.end);
+}
+```
+
 声明一个与 match.attrs 长度相同的数组 attrs，通过遍历 attrs，创建一个新对象，对每一项做如下处理：
 - 将属性名赋值给 name 属性，属性值赋值给 value
 - match.attrs.start 去除空格后赋值个 start，end 赋值给 end
@@ -168,13 +197,13 @@ let match = {
 start: function start (tag, attrs, unary, start$1, end) {}
 ```
 
-在源码中可以看到，最开始调用 createASTElement(tag, attrs, currentParent) 创建 element 对象，后面就是对 element 的一些处理:
+在源码中可以看到，最开始调用 createASTElement(tag, attrs, currentParent) 创建 AST 对象，后面就是对 element 的一些处理:
 1. 添加相关属性、
 2. 处理 v-for, v-if, v-once 指令、
 3. 是否需要将 element 赋值给 root、
 4. 如果不是单标签，将 element 赋值给 currentParent，并且将 element 存入 stack(parse 方法下的 stack)，反之则调用 closeElement 方法结束标签处理操作。
 
-后面的一些处理细节暂不做探究，主要看看 createASTElement 创建了一个什么样的对象。
+后面的一些处理细节暂不做探究，主要看看 AST 的数据结构。
 
 ```js
 function createASTElement (tag, attrs, parent) {
@@ -190,7 +219,7 @@ function createASTElement (tag, attrs, parent) {
 }
 ```
 
-这个方法很简单, 就是返回了一个对象，就是 AST 对象。parent 与 父标签建立联系，children 可以用来存储多个子标签或子元素。其中 type 的值是1，也就是说标签的类型都是1，那文本或者其他类型呢？我们在源码中找到 options.chars 方法。
+parent 与 父标签建立联系，children 可以用来存储多个子标签或子元素。其中 type 的值是1，也就是说标签的类型都是1，那文本或者其他类型呢？我们在源码中找到 options.chars 方法。
 
 ```js
 if (!inVPre && text !== ' ' && (res = parseText(text, delimiters))) {
@@ -257,7 +286,7 @@ v-once: var once = getAndRemoveAttr(el, 'v-once')。 如果 once 存在，为 el
 ### transform
 
 在明白 template 到 AST 的变化步骤之后，就可以继续探索 AST 是如何生成 render 函数方法。
-其实这一步主要是将 AST 转换成 render str 函数字符串，然后再通过 new Function(render str) 生成函数方法。由于函数字符串的转换涉及到的情况很多，过程非常复杂，因此这里只是解析一个整体的步骤。
+其实这一步主要是将 AST 转换成 render str 函数字符串，然后再通过 new Function(render str) 生成函数方法。由于函数字符串的转换涉及到的情况很多，过程非常复杂，因此这里只是解析 render 字符串形成的原理。
 
 > compiled.render = generate(ast, options).render
 
@@ -397,7 +426,7 @@ function mountComponent(vm, el, hydrating) {
 }
 ```
 
-将 updateComponent 设定为订阅者的 getter，而 vm 在前置操作时已经绑定了响应式属性，每次 vm 发生改变就会执行 updateComponent 获取最新的值。并且在初始时就调用 updateCompoennt，触发页面第一次渲染更新。这里需要注意的是，订阅者的 cb 是 noop，因为只执行 updateComponent 就能实现页面的更新（后面会讲到），因此不需要额外的回调函数。
+将 updateComponent 设定为订阅者的 getter，在初始时就会调用 updateCompoennt，触发页面第一次渲染更新。这里需要注意的是，订阅者的 cb 是 noop，因为只执行 updateComponent 就能实现页面的更新（后面会讲到），因此不需要额外的回调函数。
 
 vm._update 方法接受的第一个参是 vnode，也就是说 vm._render() 返回的是一个 vnode，找到 _render 方法，关键的就是三行代码：
 
@@ -487,7 +516,7 @@ render 方法执行的方式是从下至上，下层执行的结果就是上一�
 
 ### patch
 
-vnode 创建完成后，就可以执行 _update 方法了，实际上就是执行 patch 操作，只是初始渲染时不需比较操作，因此初始渲染和后续更新传入的参不一样。在浏览器端就是调用 createPatchFunction({ nodeOps: nodeOps, modules: modules }) 创建的，接下来看看 patch 的魔力吧。注意一点，我们这里只是探究 vnode 是如何变成 dom，不是探究 patch 过程，这两个目的的重心不一样 :)。
+vnode 创建完成后，就可以执行 _update 方法了，实际上就是执行 patch 操作，只是初始渲染时不需比较操作，因此初始渲染和后续更新传入的参不一样。在浏览器端就是调用 createPatchFunction({ nodeOps: nodeOps, modules: modules }) 创建的，接下来看看 patch 的魔力吧。注意一点，我们这里只是探究 vnode 是如何变成 dom，不是探究 patch 过程，这两个方向不一样 :)。
 
 ```js
 Vue.prototype._update = function (vnode, hydrating) {
@@ -526,7 +555,7 @@ return function patch (oldVnode, vnode, hydrating, removeOnly) {
 }
 ```
 
-很清晰的逻辑，我们传入的是 vm.$el，所以走第二个分支，依据 $el 创建一个空 vnode。紧接着是声明 oldElm 和 parentElm，分别是 #demo 和 body，用作后面方法的入参部分。最后就开始执行创建 elment 步骤了。
+逻辑很清晰，我们传入的是 vm.$el，所以走第二个分支，依据 $el 创建一个空 vnode。紧接着是声明 oldElm 和 parentElm，分别是 #demo 和 body，用作后面方法的入参部分。最后就开始执行创建 elment 步骤了。
 
 createElm 方法里主要是分成三类进行创建，对于标签，使用 createElement，另外还会使用 createChildren 创建子元素对应的 dom，注释使用 createComment，其他的使用 createTextNode。创建结束后执行 insert(parentElm, vnode.elm, refElm), 将创建的 dom 插入到指定的位置。
 

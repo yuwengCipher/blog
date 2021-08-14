@@ -52,7 +52,7 @@ function initComputed (vm, computed) {
 }
 ```
 
-遍历 computed 对象，获取到 key 对应的方法，如果是浏览器端，就创建一个 watcher。然后判断 vm 是否已经存在该 key 的属性，如果没有就去声明这个 computed 属性。
+遍历 computed 对象，获取到 key 对应的方法，如果是浏览器端，就创建一个 watcher。然后判断 vm 是否已经存在该 key 的属性，如果没有就去定义这个 computed 属性。
 
 ```js
 function defineComputed (target, key, userDef) {
@@ -108,7 +108,7 @@ if (!isSSR) {
 }
 ```
 
-watcher options 的 lazy 设置为 true，在 Watcher 构造函数内会将 dirty 设置成这样 this.dirty = this.lazy，因此 this.dirty = true。也就是说会执行 watcher.evaluate()。watcher.evaluate 方法又会涉及到 watcher.get 方法，因此同时展示如下：
+并且 watcher options 的 lazy 设置为 true，在 Watcher 构造函数内会将 dirty 设置成这样: this.dirty = this.lazy，因此 this.dirty = true。也就会执行 watcher.evaluate()。watcher.evaluate 方法又会涉及到 watcher.get 方法，因此同时展示如下：
 
 ```js
 Watcher.prototype.evaluate = function evaluate () {
@@ -164,11 +164,11 @@ get: function reactiveGetter () {
 	var value = getter ? getter.call(obj) : val;
 	// 如果收集者存在当前目标
 	if (Dep.target) {
-		// 将 Dep.targe 存入 dep.subs 中
+		// 将 Dep.target 存入 dep.subs 中
 		dep.depend();
 		// 如果 observe 返回的值需要响应式处理
 		if (childOb) {
-			// // 将 Dep.targe 存入 childOb.dep.subs 中
+			// // 将 Dep.target 存入 childOb.dep.subs 中
 			childOb.dep.depend();
 			// 处理数组情况
 			if (Array.isArray(value)) {
@@ -180,13 +180,13 @@ get: function reactiveGetter () {
 },
 ```
 
-上面已经说过，在内部会调用 reversedMessage 方法去获取最新的值，而这个值就是 this.message.split('').reverse().join('') 返回的，此时又会触发 message 的 get 方法，即上面那段代码。reversedMessage get 方法触发的时候，会执行 pushTarget(this) 将 Dep.target 设置成 this._computedWatchers['reversedMessage']，执行 dep.depend()，最后就会执行 dep.addSub(watcher) 将 watcher 存入 dep.subs 数组中，这个 dep 是 message 的监听收集器，也就是 message 改变就会通知到 reversedMessage watcher。
+上面已经说过，reversedMessage 渲染时会在内部调用 reversedMessage 方法去获取最新的值，而这个值就是 this.message.split('').reverse().join('') 返回的，此时就会触发 message 的 get 方法，即上面那段代码。reversedMessage get 方法触发的时候，会执行 pushTarget(this) 将 Dep.target 设置成 this._computedWatchers['reversedMessage']，那么当执行 dep.depend() 时，最后就会执行 dep.addSub(watcher) 将 watcher 存入 dep.subs 数组中，这个 dep 是 message 的监听收集器，也就是说 message 改变会通知到 reversedMessage watcher。
 
-综合上面说的步骤，总结方法执行图如下：
+综合上面说的步骤，总结一下方法执行图：
 
 ![computed依赖收集](https://coding-pages-bucket-3560923-8733773-16868-593524-1259394930.cos-website.ap-hongkong.myqcloud.com/blogImgs/computed依赖收集.png)
 
-执行完 watcher.evaluate，reversedMessage(watcher) 就被收集到 message 的订阅者集合中了。
+执行完 watcher.evaluate，reversedMessage watcher 就被收集到 message 的订阅者集合中了。
 
 1秒之后，this.message 变成 cipher，那么就会去执行 message.set。
 
@@ -221,7 +221,7 @@ Watcher.prototype.update = function update () {
 
 ```
 
-执行到 update 内部时你会发现，在最开始将 lazy 设置成了 true，那么这里并不会进入第二分支去执行 watcher.run，也就是说并不会更新 reversedMessage。那问题来了，reversedMessage是怎么更改的呢？在这之前，我们需要了解的一点是，在 mountComponent 中为 vm 声明过一个 watcher，存在全局的 targetStack 中进行维护。
+执行到 update 内部时你会发现，在最开始将 lazy 设置成了 true，那么这里并不会进入第二分支去执行 watcher.run，也就是说并不会更新 reversedMessage。那问题来了，reversedMessage是怎么更改的呢？在继续讲解之前，我们需要了解的一点是，每个组件实例都对应一个 watcher 实例，在程序初始化是会在 mountComponent 中为 vm 声明一个 watcher，存在全局的 targetStack 中进行维护。
 
 ```js
 function mountComponent(vm, el, hydrating) {
@@ -247,7 +247,9 @@ if (Dep.target) {
 }
  ```
 
-需要注意 watcher.depend 和 dep.depend 执行的逻辑是不同的，前者是将 deps 集合中依次执行 depend，而 dep.depend 是执行单个。此时的 Dep.target 就是 vm(这是watcher)。
+需要注意 watcher.depend 和 dep.depend 执行的逻辑是不同的，前者是将 deps 集合中依次执行 depend，而 dep.depend 是执行单个。此时的 Dep.target 就是 vm watcher。
+
+至于为什么 Dep.target 是 vm watcher，这里可以简单说下：vm watcher 存入之后，targetStack = [vm]。pushTarget(this) 会将 reversedMessage watcher 也存入 targetStaack 中，即 targetStack = [vm, reversedMessage]。get 方法最后会执行 popTarget()，它就是将栈中最后一个弹出，并把 Dep.target 指定给栈中剩下 watcher 的最后一个，也就是 vm，所以 watcher.evaluate() 执行完之后，Dep.target 就是 vm watcher。
 
 ```js
 Watcher.prototype.depend = function depend () {
@@ -268,9 +270,9 @@ Dep.prototype.depend = function depend () {
 };
 ```
 
-将 vm 存入 message 的 dep.subs 中，此时，dep.subs = [reversedMessage, vm]。到这里初始化操作结束了，页面显示为 Computed reversed message: "olleH"。
+也就是会将 vm 存入 message 的 dep.subs 中，此时，dep.subs = [reversedMessage, vm]。到这里初始化操作结束了，页面显示为 Computed reversed message: "olleH"。
 
-1秒之后进行 message 的更改操作，重新执行 notify 方法，reversedMessage update 依旧不会去执行更新 reversedMessage... 这不是又重走老路子而且还是走不通的？其实不然，因为这次跟上次不同了，这次 dep.subs 中新增了一个 vm 的 watcher，所以执行完 reversedMessage 的 update，接着会执行 vm 的 update 方法。
+1秒之后进行 message 的更改操作，重新执行 notify 方法，而 reversedMessage update 依旧不会去执行更新 reversedMessage。。。这仿佛又走的老路子而且还是走不通的。其实不然，因为这次跟上次不同了，这次 dep.subs 中新增了一个 vm 的 watcher，所以执行完 reversedMessage 的 update，接着会执行 vm 的 update 方法。
 
 因为 vm.lazy 和 vm.sync 都是 false，所以会走第三分支，执行 queueWatcher(this)
 
@@ -370,7 +372,7 @@ if (typeof Promise !== 'undefined' && isNative(Promise)) {
 }
 ```
 
-就是将 flushCallbacks 作为各种方法的回调函数，而官方的意思是考虑到各平台的差异以及会造成的 bug，按照优先级来说，微任务 > 宏任务，优先使用 promise，最差情况使用 setTimeout。概括来说，就是将一个方法延迟执行。其实 $nextTick 内部就是执行的 nextTick 方法，因此我们可以使用 $nextTick 去延迟执行一个方法。
+就是将 flushCallbacks 作为各种方法的回调函数，而官方的意思是考虑到各平台的差异以及会造成的 bug，按照优先级来说，微任务 > 宏任务，优先使用 promise，最差情况使用 setTimeout。概括来说，就是在数据发生变动时，将所涉及到的 watcher 存入 queue 中，然后使用 nextTick 方法可以让这些 watcher 的更新在下一个时间循环中执行。另外 $nextTick 内部就是执行的 nextTick 方法，因此我们可以使用 $nextTick 在下一个循环中执行方法。
 
 ```js
 function flushCallbacks () {
@@ -433,7 +435,7 @@ function flushSchedulerQueue () {
 }
 ```
 
-​	简单说下流程：
+​简单说下流程：
 
 - 首先要对 queue 里的 watcher 进行排序。原因有三点：
   1. 父组件必须要优先与子组件更新（父组件比子组件先创建）
@@ -468,22 +470,15 @@ Watcher.prototype.run = function run () {
 };
 ```
 
-首先执行 this.get()，触发 this.getter 方法执行，getter 就是 updateComponent，也就是说会重新走 render -> update 过程。而就是在 render 过程里，会重新走 message 的依赖收集过程，执行 this.reversedMessage() 更新 reversedMessage 的值。
+首先执行 this.get()，触发 this.getter 方法执行，vm.getter 就是 updateComponent，也就是说会重新走 render -> update 过程。而就是在 render 过程里，会重新执行 this.reversedMessage() 更新 reversedMessage 的值。
 
-然后依据条件执行接下来的逻辑，执行的条件可以是三种种的一种：
-1. 新值与旧值不相等
-2. value 是对象，因为有可能新值与旧值相等，但是值可能被更新过
-3. watcher.deep = true
-
-因为当前的 watcher 是 vm，并且是 render watcher，所以新值和旧值都是 'undefined'、watcehr.deep = false，因此不会执行下面的逻辑。
-
-到这里，computed 所涉及到的方法都有说到，我将他们整理成一张流程图，如下：
+到这里，将 computed 所涉及到的方法调用整理成一张流程图，如下：
 
 ![computed执行流程图](https://coding-pages-bucket-3560923-8733773-16868-593524-1259394930.cos-website.ap-hongkong.myqcloud.com/blogImgs/computed执行流程图.png)
 
 ### 为什么 computed 拥有缓存功能
 
-这个问题其实跟 “如果依赖项不是响应式的，即使改变，computed 为什么不会重新求值” 这个是一样的。
+这个问题其实跟 “如果依赖项不是响应式的，即使改变，computed 为什么也不会重新求值” 这个是一样的。
 
 我在 demo 中增加一个使用 reversedMessage 的代码
 

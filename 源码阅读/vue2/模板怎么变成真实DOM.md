@@ -426,7 +426,7 @@ function mountComponent(vm, el, hydrating) {
 }
 ```
 
-将 updateComponent 设定为订阅者的 getter，在初始时就会调用 updateCompoennt，触发页面第一次渲染更新。这里需要注意的是，订阅者的 cb 是 noop，因为只执行 updateComponent 就能实现页面的更新（后面会讲到），因此不需要额外的回调函数。
+这里就是创建组件的 Render Watcher。将 updateComponent 设定为 watcher 的 getter，在初始时就会调用 updateCompoennt，触发页面第一次渲染更新。这里需要注意的是，订阅者的 cb 是 noop，因为只执行 updateComponent 就能实现页面的更新（后面会讲到），因此不需要额外的回调函数。
 
 vm._update 方法接受的第一个参是 vnode，也就是说 vm._render() 返回的是一个 vnode，找到 _render 方法，关键的就是三行代码：
 

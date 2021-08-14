@@ -1,6 +1,6 @@
 ---
 title: props是如何传递的
-date: 2021-04-27
+date: 2021-05-01
 categories:
  - Vue
 tags:
@@ -152,7 +152,7 @@ Vue.extend = function (extendOptions) {
 };
 ```
 
-Super 就是 Vue，将 Sub .prototype 的原型指向 Super.prototype，并且还将 Vue 本身的属性赋值给 Sub，这样 Sub 就拥有了 Vue 的基本功能，而 Sub 内部执行的就是 Vue._init()，因此 Sub 就可以跟 Vue 一样进行创建组件了。
+Super 就是 Vue，将 Sub.prototype 的原型指向 Super.prototype，并且还将 Vue 本身的属性赋值给 Sub，这样 Sub 就拥有了 Vue 的基本功能，而 Sub 内部执行的就是 Vue._init()，因此 Sub 就可以跟 Vue 一样进行创建组件了。
 
 ## 父组件传递属性，子组件接收属性
 
@@ -228,7 +228,7 @@ if (isDef(attrs) || isDef(props)) {
 return res
 ```
 
-extractPropsFromVNodeData 方法中会先获取到 Child 组件中的 props 赋值给 propOptions，即：{parentMessage: {type: null}}；data 中只存在 attrs = {parent-message: "Hello"}，props 是 undefined，但只要其中有一个存在，那么就会去遍历 propOptions：
+extractPropsFromVNodeData 方法中会先获取到 Child 组件中的 props 赋值给 propOptions，即：{parentMessage: {type: null}}；data 中只存在 attrs = {parent-message: "Hello"}，props 是 undefined，但只要其中有一个存在就会去遍历 propOptions：
 - altKey 获取的是组件上添加的 attr 名称 "parent-message"，这个在初始化时已经存储起来了，所以这里直接拿就行了（存储过程暂不做解释）
 - keyInLowerCase 是将 parentMessage 转成小写的 "parentmessage"
 - 最后执行 checkProp(res, attrs, key, altKey, false)。所做的事情就是判断 attrs[altKey] 是否为 true，如果存在就执行 res[key] = attrs[altKey]，即：res['parentMessage'] = attrs['parent-message'] = 'Hello';
@@ -294,23 +294,12 @@ function createComponent (vnode, insertedVnodeQueue, parentElm, refElm) {
 		if (isDef(i = i.hook) && isDef(i = i.init)) {
 			i(vnode, false /* hydrating */);
 		}
-		// after calling the init hook, if the vnode is a child component
-		// it should've created a child instance and mounted it. the child
-		// component also has set the placeholder vnode's elm.
-		// in that case we can just return the element and be done.
-		if (isDef(vnode.componentInstance)) {
-			initComponent(vnode, insertedVnodeQueue);
-			insert(parentElm, vnode.elm, refElm);
-			if (isTrue(isReactivated)) {
-				reactivateComponent(vnode, insertedVnodeQueue, parentElm, refElm);
-			}
-			return true
-		}
+		// 省略
 	}
 }
 ```
 
-首先会调用 hook.init 用来初始化 component，先来看看这个。
+调用 hook.init 初始化 component。
 
 ```js
 init: function init (vnode, hydrating) {
@@ -343,7 +332,6 @@ function createComponentInstanceForVnode (vnode, parent) {
 		_parentVnode: vnode,
 		parent: parent
 	};
-	// check inline-template render functions
 	var inlineTemplate = vnode.data.inlineTemplate;
 	if (isDef(inlineTemplate)) {
 		options.render = inlineTemplate.render;
@@ -388,7 +376,7 @@ function initProps (vm, propsOptions) {
 1. 声明一个变量 props，将它与 vm._props 都指向 {}，如果 props 发生改变，vm._props 也会跟着改变
 2. 为 props.parentMessage 添加数据劫持并且赋值为 'Hello'。
 
-通过断点调试，你会发现执行完这一步后，vm.prototype 添加上了 parrentMessage 属性，值也是 'Hello'。这是为什么呢？在开始去寻找答案之前，我们可以猜测是 vm._props 与 vm.prototype 自身做了某种联系才会有这样的同步效果。因为 vm 的构造函数时 VueComponent，我们找到最上面的 extend 方法，里面有一个这样的处理：
+通过断点调试，你会发现执行完这一步后，vm.prototype 添加上了 parentMessage 属性，值也是 'Hello'。这是为什么呢？在开始去寻找答案之前，我们可以猜测是 vm._props 与 vm.prototype 自身做了某种联系才会有这样的同步效果。因为 vm 的构造函数是 VueComponent，我们找到最上面的 extend 方法，里面有一个这样的处理：
 
 ```js
 if (Sub.options.props) {
@@ -396,7 +384,9 @@ if (Sub.options.props) {
 }
 ```
 
-Sub.options.props = {parentMessage: {type: null}}，进入 initProps(Sub) 处理流程：
+> Sub.options.props = {parentMessage: {type: null}}
+
+进入 initProps(Sub) 处理流程：
 
 ```js
 function initProps (Comp) {
@@ -422,6 +412,8 @@ function proxy (target, sourceKey, key) {
 第一层：vm.prototype.parentMessage ——> vm.prototype.parentMessage.get() ——> return vm._props.parentMessage
 第二层：vm._props.parentMessage ——> vm._props.parentMessage.get() ——> return 'Hello'
 
+串起来就是 vm.prototype.parentMessage = vm._props.parentMessage。
+
 ## 最后的渲染
 
 组件实例创建完成后，调用 child.$mount() 开始进行 child 组件的 parse、transform、patch 处理过程。其中生成的 render 函数如下所示：
@@ -433,7 +425,7 @@ with(this){return _c('p',[_v("parentMessage is ï¼š"+_s(parentMessage))])}
 })
 ```
 
-当使用 parentMessage 这个属性时，会触发它的 vm.prototype.parentMessage 的 get 方法，拿到 'Hello'，那么 'Hello' 就可以被渲染到页面中了。也就实现了 parentMessage 从父组件传递，到子组件接收，再到子组件渲染的这样一个过程。用一张图来表示一下整个流程：
+当使用 parentMessage 这个属性时，会触发 vm.prototype.parentMessage 的 get 方法，拿到 'Hello'，那么 'Hello' 就可以被渲染到页面中了。也就实现了 parentMessage 从父组件传递，到子组件接收，再到子组件渲染的这样一个过程。用一张图来表示一下整个流程：
 
 ![props传递流程图](props是如何传递的.assets/props传递流程图.png)
 
@@ -445,7 +437,7 @@ message 会在1秒之后变成 cipher，而 parentMessage is：Hello 也会显�
 
 ## 子组件如何更改 prop
 
-在 initProps 中进行为 prop 绑定数据劫持时，会传入一个 customSetter 方法，当我们试图改变 props 时，就会执行这个方法，提示不能在直接在子组件更改属性，需要父组件去更改，然后子组件来更新。官方给出的方案是 .sync 修饰符。我们将 demo 改成如下所示：
+在 initProps 中为 prop 绑定数据劫持时，会传入一个 customSetter 方法，当我们试图改变 props 时，就会执行这个方法，提示不能在直接在子组件更改属性，需要父组件去更改，然后子组件来更新。官方给出的方案是 .sync 修饰符。我们将 demo 改成如下所示：
 
 ```js
 // html
@@ -462,7 +454,7 @@ mounted () {
 
 这样修改之后，1秒之后，页面就从 parentMessage is：Hello 显示为 parentMessage is：change in child。实现了在子组件去更改父组件的 prop。
 
-想知道为什么，我们就得从源头下手，那就是 parse 阶段，在这个阶段会将 template 转换成 AST，会发现 AST.attrsList 属性如下：
+想知道原因，我们就得从源头下手，那就是父组件的 parse 阶段，在这个阶段会将 template 转换成 AST，会发现 child 的 AST.attrsList 属性如下：
 
 ```js
 attrsList = [
@@ -475,14 +467,7 @@ attrsList = [
 ]
 ```
 
-依然像普通属性一样存储。在 [模板怎么变成真实DOM](https://djacipher.cn/2021/04/19/%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/vue2/%E6%A8%A1%E6%9D%BF%E6%80%8E%E4%B9%88%E5%8F%98%E6%88%90%E7%9C%9F%E5%AE%9EDOM/) 中，我们讲过对字符串是按照标签来拆解解析，遇到闭合标签会调用 parseEndTag 处理，而该方法内部则会调用 closeElement 去执行结束标签解析动作，而 closeElement 又会调用 processElement 去处理还没有处理过且不存在 pre 属性的 element：
-
-```js
-// processElement
-// 省略
-processAttrs(element);
-return element
-```
+依然像普通属性一样存储。在 [模板怎么变成真实DOM](https://djacipher.cn/2021/04/19/%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/vue2/%E6%A8%A1%E6%9D%BF%E6%80%8E%E4%B9%88%E5%8F%98%E6%88%90%E7%9C%9F%E5%AE%9EDOM/) 中，我们讲过对字符串是按照标签来拆解解析，遇到闭合标签会调用 parseEndTag 处理，而该方法内部则会调用 closeElement 去执行结束标签解析动作，而 closeElement 又会调用 processElement 去处理还没有处理过且不存在 pre 属性的 element，处理 element 包括处理 attrs，方法是 processAttrs。
 
 重点来看 processAttrs 方法：
 
@@ -684,7 +669,7 @@ opts._parentListeners = vnodeComponentOptions.listeners;
 
 转换过来就是这样：vm.$options._parentListeners = parentVnode.componentOptions.listeners。
 
-然后 _init 内部会继续执行 initEvents(vm)，也就是会执行 updateComponentListeners(vm, listeners)。
+在 _init 内部会继续执行 initEvents(vm)，也就是会执行 updateComponentListeners(vm, listeners)。
 
 ```js
 function initEvents (vm) {
@@ -742,9 +727,7 @@ function add (event, fn) {
 
 而 add 方法就是调用 $on 去注册方法，所以我们就可以使用 $emit 去触发这个事件。
 
-讲完了整个流程之后，需要再补充一个问题：
-
-## message 改变之后触发的更新，render 函数中是如何添加上 on 事件对象
+讲完了整个流程之后，需要再补充一个问题：message 改变之后触发的更新，render 函数中如何添加上 on 事件对象？
 
 在 [模板怎么变成真实DOM](https://djacipher.cn/2021/04/19/%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/vue2/%E6%A8%A1%E6%9D%BF%E6%80%8E%E4%B9%88%E5%8F%98%E6%88%90%E7%9C%9F%E5%AE%9EDOM/) 中，我们讲 genElement 步骤时提到过，如果是 component，会走 genComponent 生成 component render 字符串：
 
@@ -789,6 +772,8 @@ if (dynamicHandlers) {
 
 prefix 是判断是否是原生事件，这里就是 on。遍历 events 对象，拿到每个事件的执行方法，因为事件名是静态的，所以会走第二分支，最后执行
 > return "on:{"update:parentMessage":function($event){message=$event},"update:parent-message":function($event){message=$event}}"
+
+这样就为子组件的 render 字符串加上了 on 属性。
 
 ## 总结
 

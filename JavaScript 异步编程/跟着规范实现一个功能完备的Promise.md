@@ -1,6 +1,6 @@
 ---
 title: 跟着规范实现一个功能完备的Promise
-date: 2021-04-02
+date: 2020-08-18
 categories:
  - JS
 tags:

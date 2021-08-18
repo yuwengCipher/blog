@@ -1,5 +1,5 @@
 ---
-title: computed的[怪异]表现
+title: computed 的[怪异]表现
 date: 2021-04-25
 categories:
  - Vue
@@ -521,6 +521,6 @@ computed:{
 
 this.reversedMessage 触发 reversedMessage 的 getter，跟上面提到的执行步骤是一样的，所以会执行 reversedMessage 方法。也就是说 this.reversedMessage() 相当于是 this.reversedMessage()()，this.reversedMessage() 执行完后的值不是方法，所以后面接 () 使用就会报错。
 
-## 结语
+## 最后
 
 computed 在日常使用中，产生的诸多疑惑降低了使用它的快感，所以本文依据这些问题从源码的角度去寻求答案，了解设计背后的秘密。

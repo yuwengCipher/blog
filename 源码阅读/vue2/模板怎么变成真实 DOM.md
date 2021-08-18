@@ -1,5 +1,5 @@
 ---
-title: 模板怎么变成真实DOM
+title: 模板怎么变成真实 DOM
 date: 2021-04-19
 categories:
  - Vue
@@ -292,7 +292,7 @@ v-once: var once = getAndRemoveAttr(el, 'v-once')。 如果 once 存在，为 el
 
 generate 方法如下：
 
-```js	
+```js
 var state = new CodegenState(options);
 var code = ast ? (ast.tag === 'script' ? 'null' : genElement(ast, state)) : '_c("div")';
 return {
@@ -950,6 +950,6 @@ function mergeVNodeHook (def, hookKey, hook) {
 
 dir.def[hook] 即上面包装两层的 invoker。
 
-## 结语
+## 最后
 
 invokeCreateHooks 执行完成后，就会调用 insert(parentElm, vnode.elm, refElm) 挂载 dom。 本文把模板到真实 DOM 的转变分成 parse、transform、generate、patch 四个步骤，前三步骤所做的事跟传统编译步骤不太一样，但也有相同点，这样划分是为了更好的在宏观层面有一个流程记忆，方便理解。每一个步骤都会涉及巨量内容及复杂情况的处理，不可能都涉及到，因此本篇的宗旨是从宏观上理解这些过程。

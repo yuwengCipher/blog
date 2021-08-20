@@ -1,6 +1,6 @@
 ---
 title: props 是如何传递的
-date: 2021-05-01
+date: 2021-05-23
 categories:
  - Vue
 tags:
@@ -427,7 +427,7 @@ with(this){return _c('p',[_v("parentMessage is ï¼š"+_s(parentMessage))])}
 
 当使用 parentMessage 这个属性时，会触发 vm.prototype.parentMessage 的 get 方法，拿到 'Hello'，那么 'Hello' 就可以被渲染到页面中了。也就实现了 parentMessage 从父组件传递，到子组件接收，再到子组件渲染的这样一个过程。用一张图来表示一下整个流程：
 
-![props传递流程图](props是如何传递的.assets/props传递流程图.png)
+![props传递流程图](https://coding-pages-bucket-3560923-8733773-16868-593524-1259394930.cos-website.ap-hongkong.myqcloud.com/blogImgs/props传递流程图.png)
 
 ## 为什么 props 的值会跟着父组件改变
 

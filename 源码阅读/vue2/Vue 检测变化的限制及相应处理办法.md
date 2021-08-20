@@ -1,6 +1,7 @@
 ---
 title: Vue 检测变化的限制及相应处理办法
-date: 2021-05-03
+date: 2021-06-07
+index_img: 'https://coding-pages-bucket-3560923-8733773-16868-593524-1259394930.cos-website.ap-hongkong.myqcloud.com/blogImgs/thumbnail/Vue检测变化的限制及相应处理办法.jpg'
 categories:
  - Vue
 tags:

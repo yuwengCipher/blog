@@ -502,7 +502,7 @@ MyPromise.deferred = function () {
 }
 ```
 
-\#最后
+## 最后
 
 ```js
 promises-aplus-tests promise.js

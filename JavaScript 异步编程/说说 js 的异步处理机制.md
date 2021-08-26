@@ -253,7 +253,7 @@ asyncFn();
    async 执行表达式并立刻获取返回值，如果没有则为 undefined
 ```
 
-## 总结
+## 最后
 
 js 处理异步的方法经历了 回调函数、promise、generator、async 这四个阶段，每一种新方法都是对前方法的改善，主要处理的点有两点：
 

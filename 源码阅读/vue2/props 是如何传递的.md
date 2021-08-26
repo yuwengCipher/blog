@@ -412,7 +412,7 @@ function proxy (target, sourceKey, key) {
 第一层：vm.prototype.parentMessage ——> vm.prototype.parentMessage.get() ——> return vm._props.parentMessage
 第二层：vm._props.parentMessage ——> vm._props.parentMessage.get() ——> return 'Hello'
 
-串起来就是 vm.prototype.parentMessage = vm._props.parentMessage。
+串起来就是 vm.prototype.parentMessage ——> vm._props.parentMessage。
 
 ## 最后的渲染
 

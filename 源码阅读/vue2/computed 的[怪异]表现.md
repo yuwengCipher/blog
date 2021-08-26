@@ -523,4 +523,8 @@ this.reversedMessage 触发 reversedMessage 的 getter，跟上面提到的执�
 
 ## 最后
 
-computed 在日常使用中，产生的诸多疑惑降低了使用它的快感，所以本文依据这些问题从源码的角度去寻求答案，了解设计背后的秘密。
+computed 的怪异表现其实来自于与 method 的相似性。形式上是 method，但是使用上是 data。
+
+1. 底层上为 computed 添加数据劫持，然后将 computed 代理给了 vm，在当做 data 一样使用时就可以触发 get 去执行这个 computed。
+2. 如果不在模板中使用，那么响应式依赖项就算改变了也不会重新求值，是因为重新求值依靠的是页面渲染时触发 computed。
+3. 缓存功能其实依赖于 computed 对应 watcher 的 dirty 属性。它的 dirty 默认为 true，只有为 true 才能求值。在进行一次求值后会将 dirty 改为 false，那么下次执行到这里时不会重新求值，而是直接拿上次的值。

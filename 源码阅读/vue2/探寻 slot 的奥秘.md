@@ -9,11 +9,11 @@ tags:
 
 ## 前言
 
-slot 思想借鉴于 Web Component，使用 <slot> 为内容提供一个占位符，然后我们就可以往里面填充自定义内容。slot 有不同的用法形式，官方文档也有详细说明，因此本篇不是来讲解用法的，我们的任务是弄明白 slot 工作的原理。
+slot 思想借鉴于 Web Component，使用 &lt;slot&gt; 为内容提供一个占位符，然后我们就可以往里面填充自定义内容。slot 有不同的用法形式，官方文档也有详细说明，因此本篇不是来讲解用法的，我们的任务是弄明白 slot 工作的原理。
 
-由于 slot 的用法有很多种，每一种涉及的情形和处理也不同，但基本原理是相同的，所以本篇只会讲解 具名插槽 named slots 和 作用域插槽 scoped slots。
+由于 slot 的用法有很多种，每一种涉及的情形和处理也不同，但基本原理是相同的，所以本篇只会讲解具名插槽 named slots 和 作用域插槽 scoped slots。
 
-开始之前，需提前查看 [模板怎么变成真实DOM](https://djacipher.cn/2021/04/19/%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/vue2/%E6%A8%A1%E6%9D%BF%E6%80%8E%E4%B9%88%E5%8F%98%E6%88%90%E7%9C%9F%E5%AE%9EDOM/) 了解 Vue 大致的渲染流程，在这篇中，transform 步骤讲的是 AST 如何转变为 render 字符串，涉及到的 genELement 方法中会使用 genSlot 处理 slot。
+开始之前，需提前查看 [模板怎么变成真实DOM](https://djacipher.cn/2021/05/02/%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/vue2/%E6%A8%A1%E6%9D%BF%E6%80%8E%E4%B9%88%E5%8F%98%E6%88%90%E7%9C%9F%E5%AE%9E%20DOM/) 了解 Vue 大致的渲染流程，在这篇中，transform 步骤讲的是 AST 如何转变为 render 字符串，涉及到的 genELement 方法中会使用 genSlot 处理 slot。
 
 ## 具名插槽
 
@@ -51,7 +51,7 @@ function genSlot (el, state) {
 }
 ```
 
-genSlot 就是将 AST 中的 slot 属性包装成 render 字符串，render 函数中使用 _t 方法渲染 slot 属性。此 demo 的 render 函数字符串为
+genSlot 就是将 AST 中的 slot 属性包装成 render 函数字符串，render 函数中使用 _t 方法渲染 slot 属性。此 demo 的 render 函数字符串为
 
 > _t("default")
 
@@ -98,7 +98,7 @@ var vnode = new VNode(
 )
 ```
 
-最后一个对象会作为 componentOptions 传入，Ctor 是构造函数 VueComponent ，children 是 {{branches[0]}}。
+最后一个对象会作为 componentOptions 传入，Ctor 是构造函数 VueComponent ，children 是 branches[0]。
 
 然后就需要渲染子组件本身了，调用的方法就是创建组件的构造函数，也就是执行 new vnode.componentOptions.Ctor(options)，然后在内部就会调用 _init(options)。入参 options 如下所示：
 
@@ -112,7 +112,7 @@ var options = {
 
 options._parentVnode 就是 Child vnode。
 
-知道了这个处理流程后，下面逐个说明 normalizeScopedSlots 入参：
+知道了这个处理流程后，下面就说明 normalizeScopedSlots 入参：
 
 - _parentVnode 就是 Child vnode，那 data.scopedSlots 是被 Child 组件包裹的 slot 属性，这个后面会具体说。
 - 另外两个参数 vm.$slots 和 vm.$scopedSlots 初始定义在 initRender 方法里。
@@ -145,7 +145,7 @@ var vnodeComponentOptions = parentVnode.componentOptions;
 opts._renderChildren = vnodeComponentOptions.children;
 ```
 
-vnodeComponentOptions.children 指的是 Child 组件在父组件中得占位 vnode，在这里就是 {{branches[0]}} 所对应的 vnode。
+vnodeComponentOptions.children 指的是 Child 组件在父组件中的占位 vnode，在这里就是 branches[0] 所对应的 vnode。
 
 那现在我们来看看 resolveSlots([vnode], vm) 的执行结果
 
@@ -184,10 +184,12 @@ function resolveSlots (
 
 先创建一个声明式对象 slots，如果 children 存在，那么就会去遍历 children
 - 如果 child vnode 是作为 slot，那么就要删除 data.attrs.slot
-- 如果 存在多个 named slot，只有与 Child 组件存在于同一个上下文才会去将 child 存入 slots[name] 中
-- 否则就将 child 存入 slots[default] 中
+- 如果 存在多个 named slot，只有与 Child 组件存在于同一个上下文才会被存入 slots[name] 中
+- 否则就存入 slots[default] 中
 
-由于文本 vnode 不存在 data 属性，因此这里会进入最后一个分支，为 slots 添加 default 数组并将 vnode 存入，即 slots = {default: [vnode]}
+由于文本 vnode 不存在 data 属性，因此这里会进入最后一个分支，为 slots 添加 default 数组并将 vnode 存入，即 slots = {default: [vnode]}。
+
+总结来说，就是不同类型的 slot 会被存入不同的集合中。
 
 弄明白了这些之后，我们再回过头来看看 normalizeScopedSlots。
 
@@ -237,7 +239,7 @@ function normalizeScopedSlots (
 }
 ```
 
-由于 slots 不存在，那么 res = {}，然后遍历 normalSlots，为 res 添加 slot 属性：key 是 'default'，value 方法 proxyNormalSlot。最后是给 res 添加三个属性。
+由于 slots 不存在，那么 res = {}，然后遍历 normalSlots，为 res 添加 slot 属性：key 是 'default'，value 方法 proxyNormalSlot。
 
 ```js
 function proxyNormalSlot (slots, key) {
@@ -245,7 +247,9 @@ function proxyNormalSlot (slots, key) {
 }
 ```
 
-返回的也是一个方法，这个方法执行结果就是返回对应 slotName 的 vnode，在这里就是 return slots['default']。
+proxyNormalSlot 返回的也是一个方法，执行这个方法就会得到对应 slotName 的 vnode，在这里就是 return slots['default']。
+
+最后是给 res 添加 $stable、$key、$hasNormal 这三个属性。
 
 也就是说 $scopedSlots 是如下对象：
 
@@ -260,7 +264,7 @@ $scopedSlots = {
 
 现在 $scopedSlots 对象拿到了，那么在 renderSlot 内就可以通过 this.$scopedSlots['default'] 拿到对应的 vnode，后面就是进入正常的 DOM 创建流程了。
 
-以上，我们关注重点信息，梳理了 slot 内容是如何填充的过程，可以结合下图进行查看：
+以上，我们关注重点信息，梳理了 slot 内容是如何从父组件传递到子组件的过程，可以结合下图进行查看：
 
 ![render流程](https://coding-pages-bucket-3560923-8733773-16868-593524-1259394930.cos-website.ap-hongkong.myqcloud.com/blogImgs/render流程.png)
 
@@ -358,7 +362,7 @@ if (!inVPre && !element.processed) {
 }
 ```
 
-在它的内部执行 processSlotContent(element) 处理 slot，因为我们使用的新语法，所以只看下面这部分：
+在它的内部执行 processSlotContent(element) 处理 slot，因为我们用的新语法即使用 template 标签来包括内容，所以只看下面这部分：
 
 ```js
 if (el.tag === 'template') {
@@ -389,7 +393,7 @@ if (el.tag === 'template') {
 }
 ```
 
-在模板中的标签被处理时，标签上的属性会被存进 AST 中的 attrList 中，那么 v-slot 属性就会被存进去。getAndRemoveAttrByRegex(el, slotRE) 就是取出 slot 属性对象，然后就是为自身 AST 添加 slot 相关的 slotTarget、slotScope 等属性
+在模板中的标签被处理时，标签上的属性会被存进 AST 中的 attrList 中，那么 v-slot 属性就会被存进去。getAndRemoveAttrByRegex(el, slotRE) 就是取出 slot 属性对象 slotBinding，然后就是为自身 AST 添加 slot 相关的 slotTarget、slotScope 等属性
 
 步骤二：为父 AST 添加 scopedSlots 属性。
 
@@ -411,7 +415,7 @@ if (currentParent && !element.forbidden) {
 
 currentParent 是 Child，而且 template 标签中不存在 v-if 等指令，那么就会进入第二分支。
 
-element.slotScope 和 element.slotTarget 在 processElement 处理时已经加上了。首先将 element.slotTarget 也就是 slot 的名称赋值给 name。然后就是对 currentParent.scopedSlots 的处理，如果不存在声明为对象；如果它存在，那么就为它添加一个 scopedSlots 属性，比如说这种：
+element.slotScope 和 element.slotTarget 在 processElement 处理时已经加上了。首先将 element.slotTarget 也就是 slot 的名称赋值给 name。然后就是对 currentParent.scopedSlots 的处理，如果不存在就声明为对象；如果它存在，那么就将当前 AST 作为一个属性存入，key 就是 template 的 slot 命名，比如说这种：
 
 > currentParent.scopedSlots['b'] = bAST
 
@@ -447,13 +451,13 @@ function resolveScopedSlots (
 }
 ```
 
-它的第一个参数是一个数组
+它的第一个参数是一个数组，比如说下面这种：
 
 ```js
 [{key:"default",fn:function(){return [_v("default: "+_s(branches[1]))]},proxy:true},{key:"b",fn:function(){return [_v("b: "+_s(branches[0]))]},proxy:true}]
 ```
 
-最终会进入第二个分支，执行 res[slot.key] = slot.fn，那么 res 就拥有了名称为 b 和 default 的方法。也就是说在执行 _c('child') 时， Child vnode 的 scopedSlots 是一个拥有2个方法的对象。
+在对数组的循环处理中，内部逻辑最终会进入第二个分支，执行 res[slot.key] = slot.fn，那么 res 就拥有了名称为 b 和 default 的方法。也就是说在执行 _c('child') 时， Child vnode 的 scopedSlots 是一个拥有这2个方法的对象。
 
 我们再回到 Child 组件内部的 slot 处理方法 normalizeScopedSlots，我们看一下重点部分，简化后如下所示
 
@@ -472,7 +476,7 @@ for (var key$2 in normalSlots) {
 }
 ```
 
-这里的 slots 就是 _parentVnode.data.scopedSlots，是拥有返回 b 和 default vnode 的方法；normalSlots 是被 Child 组件包裹的 vnode。
+这里的 slots 就是 _parentVnode.data.scopedSlots，拥有 b 和 default 方法；normalSlots 是被 Child 组件包裹的 vnode。
 
 第一个循环里，是对 normalSlots 的处理
 
@@ -501,7 +505,7 @@ function normalizeScopedSlot (normalSlots, key, fn) {
 }
 ```
 
-normalizeScopedSlot 实际上就是返回一个方法，也就是每遍历一个 vnode，就会为 res 添加一个方法，那么如果遇到同名的，就会覆盖掉原有的。另外还重写了 normalSlots，它本来是 Child 包裹的 vnode，但是现在将它变成拥有 b 和 default 方法的对象。也就是说默认 default 的内容被去除了。
+normalizeScopedSlot 实际上就是返回一个方法，也就是每遍历一个 vnode，就会为 res 添加一个方法，那么如果遇到同名的，就会覆盖掉原有的。另外还重写了 normalSlots，它本来是 Child 包裹的 vnode，但是经过处理后，它也是跟 scopedSlots 类似的对象。当前的例子来说，就是将它变成拥有 b 和 default 方法的对象。也就是说默认 default 的内容被去除了。
 
 ## 作用域插槽
 
@@ -562,7 +566,7 @@ with(this){return _c('p',[_t("default",function(){return [_v("render in child: "
 })
 ```
 
-_t 是 renderSlot，三个参数分别是 fnKey、fnVal 和 {"branchesInChild":branchesInChild}。这里的重点就是多了一个 {"branchesInChild":branchesInChild} 这个对象，它会作为 props 传入 renderSlot 中，用于 this.$scopedSlots 中的方法获取 vnodes。
+_t 是 renderSlot，三个参数分别是 fnKey、fnVal 和 {"branchesInChild":branchesInChild}。这里的重点就是多了一个 {"branchesInChild":branchesInChild} 这个对象，它会作为 props 传入 renderSlot 中，用于通过 this.$scopedSlots 中的方法获取 vnodes。
 
 ```js
 function renderSlot (

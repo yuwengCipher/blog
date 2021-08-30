@@ -156,7 +156,7 @@ Super 就是 Vue，将 Sub.prototype 的原型指向 Super.prototype，并且还
 
 ## 父组件传递属性，子组件接收属性
 
-这些初始化工作做好之后，就开始执行父组件的 new Vue() 流程，执行转译的三个步骤： parse、transform、generate。转译步骤可以查看 [模板怎么变成真实DOM](https://djacipher.cn/2021/04/19/%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/vue2/%E6%A8%A1%E6%9D%BF%E6%80%8E%E4%B9%88%E5%8F%98%E6%88%90%E7%9C%9F%E5%AE%9EDOM/) 。其中 transform 会将 AST 转换成如下 render 函数：
+这些初始化工作做好之后，就开始执行父组件的 new Vue() 流程，执行转译的三个步骤： parse、transform、generate。转译步骤可以查看 [模板怎么变成真实DOM](https://djacipher.cn/2021/05/02/%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/vue2/%E6%A8%A1%E6%9D%BF%E6%80%8E%E4%B9%88%E5%8F%98%E6%88%90%E7%9C%9F%E5%AE%9E%20DOM/) 。其中 transform 会将 AST 转换成如下 render 函数：
 
 ```js
 (function anonymous(
@@ -433,7 +433,7 @@ with(this){return _c('p',[_v("parentMessage is ï¼š"+_s(parentMessage))])}
 
 message 会在1秒之后变成 cipher，而 parentMessage is：Hello 也会显示为 parentMessage is：cipher，为什么 props 的值会跟着父组件改变？
 
-在 [computed的[怪异]表现](https://djacipher.cn/2021/04/25/%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/vue2/computed%E7%9A%84%5B%E6%80%AA%E5%BC%82%5D%E8%A1%A8%E7%8E%B0/) 中已经讲过，message 的改变会触发父组件的重新渲染，那么就会将我们上面说到的流程重新走一遍，而这次传进来的 message 是 cipher，所以也就会显示 cipher。
+在 [computed的[怪异]表现](https://djacipher.cn/2021/05/12/%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/vue2/computed%20%E7%9A%84%5B%E6%80%AA%E5%BC%82%5D%E8%A1%A8%E7%8E%B0/) 中已经讲过，message 的改变会触发父组件的重新渲染，那么就会将我们上面说到的流程重新走一遍，而这次传进来的 message 是 cipher，所以也就会显示 cipher。
 
 ## 子组件如何更改 prop
 
@@ -467,7 +467,7 @@ attrsList = [
 ]
 ```
 
-依然像普通属性一样存储。在 [模板怎么变成真实DOM](https://djacipher.cn/2021/04/19/%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/vue2/%E6%A8%A1%E6%9D%BF%E6%80%8E%E4%B9%88%E5%8F%98%E6%88%90%E7%9C%9F%E5%AE%9EDOM/) 中，我们讲过对字符串是按照标签来拆解解析，遇到闭合标签会调用 parseEndTag 处理，而该方法内部则会调用 closeElement 去执行结束标签解析动作，而 closeElement 又会调用 processElement 去处理还没有处理过且不存在 pre 属性的 element，处理 element 包括处理 attrs，方法是 processAttrs。
+依然像普通属性一样存储。在 [模板怎么变成真实DOM](https://djacipher.cn/2021/05/02/%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/vue2/%E6%A8%A1%E6%9D%BF%E6%80%8E%E4%B9%88%E5%8F%98%E6%88%90%E7%9C%9F%E5%AE%9E%20DOM/) 中，我们讲过对字符串是按照标签来拆解解析，遇到闭合标签会调用 parseEndTag 处理，而该方法内部则会调用 closeElement 去执行结束标签解析动作，而 closeElement 又会调用 processElement 去处理还没有处理过且不存在 pre 属性的 element，处理 element 包括处理 attrs，方法是 processAttrs。
 
 重点来看 processAttrs 方法：
 
@@ -729,7 +729,7 @@ function add (event, fn) {
 
 讲完了整个流程之后，需要再补充一个问题：message 改变之后触发的更新，render 函数中如何添加上 on 事件对象？
 
-在 [模板怎么变成真实DOM](https://djacipher.cn/2021/04/19/%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/vue2/%E6%A8%A1%E6%9D%BF%E6%80%8E%E4%B9%88%E5%8F%98%E6%88%90%E7%9C%9F%E5%AE%9EDOM/) 中，我们讲 genElement 步骤时提到过，如果是 component，会走 genComponent 生成 component render 字符串：
+在 [模板怎么变成真实DOM](https://djacipher.cn/2021/05/02/%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/vue2/%E6%A8%A1%E6%9D%BF%E6%80%8E%E4%B9%88%E5%8F%98%E6%88%90%E7%9C%9F%E5%AE%9E%20DOM/) 中，我们讲 genElement 步骤时提到过，如果是 component，会走 genComponent 生成 component render 字符串：
 
 ```js
 return ("_c(" + componentName + "," + (genData(el, state)) + (children ? ("," + children) : '') + ")")

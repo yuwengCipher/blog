@@ -528,16 +528,13 @@ return function patch (oldVnode, vnode, hydrating, removeOnly) {
 	// 省略
 	var isRealElement = isDef(oldVnode.nodeType);
 	if (!isRealElement && sameVnode(oldVnode, vnode)) {
-		// patch existing root node
 		patchVnode(oldVnode, vnode, insertedVnodeQueue, null, null, removeOnly);
 	} else {
-		// initrender
 		if (isRealElement) {
 			// 省略
 			oldVnode = emptyNodeAt(oldVnode);
 		}
 
-		// replacing existing element
 		var oldElm = oldVnode.elm;
 		var parentElm = nodeOps.parentNode(oldElm);
 
@@ -545,9 +542,6 @@ return function patch (oldVnode, vnode, hydrating, removeOnly) {
 		createElm(
 			vnode,
 			insertedVnodeQueue,
-			// extremely rare edge case: do not insert if old element is in a
-			// leaving transition. Only happens when combining transition +
-			// keep-alive + HOCs. (#4590)
 			oldElm._leaveCb ? null : parentElm,
 			nodeOps.nextSibling(oldElm)
 		);
@@ -593,7 +587,7 @@ function invokeCreateHooks (vnode, insertedVnodeQueue) {
 	for (var i = 0; i < cbs.create.length; ++i) {
 		cbs.create[i](emptyNode, vnode);
 	}
-	i = vnode.data.hook; // Reuse variable
+	i = vnode.data.hook;
 	if (isDef(i)) {
 		if (isDef(i.create)) { i.create(emptyNode, vnode); }
 		if (isDef(i.insert)) { insertedVnodeQueue.push(vnode); }
@@ -829,7 +823,6 @@ function invoker () {
 			invokeWithErrorHandling(cloned[i], null, arguments, vm, "v-on handler");
 		}
 	} else {
-		// return handler return value for single handlers
 		return invokeWithErrorHandling(fns, null, arguments, vm, "v-on handler")
 	}
 }
@@ -846,8 +839,6 @@ function invokeWithErrorHandling (handler, context, args, vm, info) {
 		res = args ? handler.apply(context, args) : handler.call(context);
 		if (res && !res._isVue && isPromise(res) && !res._handled) {
 			res.catch(function (e) { return handleError(e, vm, info + " (Promise/async)"); });
-			// issue #9511
-			// avoid catch triggering multiple times when nested calls
 			res._handled = true;
 		}
 	} catch (e) {
@@ -929,8 +920,6 @@ if (dirsWithInsert.length) {
 function mergeVNodeHook (def, hookKey, hook) {
 	function wrappedHook () {
 		hook.apply(this, arguments);
-		// important: remove merged hook to ensure it's called only once
-		// and prevent memory leak
 		remove(invoker.fns, wrappedHook);
 	}
 

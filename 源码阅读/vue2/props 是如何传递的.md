@@ -40,7 +40,7 @@ new Vue({
 
 ## Vue.component 是什么
 
-vue 初始化程序中会执行 initGlobalAPI(Vue), 用来初始化全局 api 以供后期使用，其中就包括 initAssetRegisters(Vue)。
+我们使用 Vue.component() 注册一个组件，然后就可以使用这个组件。那这个方法是如何注册组件的呢？我们知道 vue 初始化程序时会执行 initGlobalAPI(Vue) 初始化全局 api 以供后期使用，其中就包括 initAssetRegisters(Vue)。
 
 ```js
 var ASSET_TYPES = [
@@ -229,9 +229,36 @@ return res
 ```
 
 extractPropsFromVNodeData 方法中会先获取到 Child 组件中的 props 赋值给 propOptions，即：{parentMessage: {type: null}}；data 中只存在 attrs = {parent-message: "Hello"}，props 是 undefined，但只要其中有一个存在就会去遍历 propOptions：
-- altKey 获取的是组件上添加的 attr 名称 "parent-message"，这个在初始化时已经存储起来了，所以这里直接拿就行了（存储过程暂不做解释）
+- altKey 就是通过正则将 parentMessage 转换为 "parent-message"
 - keyInLowerCase 是将 parentMessage 转成小写的 "parentmessage"
-- 最后执行 checkProp(res, attrs, key, altKey, false)。所做的事情就是判断 attrs[altKey] 是否为 true，如果存在就执行 res[key] = attrs[altKey]，即：res['parentMessage'] = attrs['parent-message'] = 'Hello';
+- 最后执行 checkProp(res, attrs, key, altKey, false)。所做的事情就是执行 res[key] = attrs[altKey]，即：res['parentMessage'] = attrs['parent-message'] = 'Hello';
+
+这里要讲一下 checkProp
+
+```js
+function checkProp (res, hash, key, altKey, preserve) {
+	if (isDef(hash)) {
+		if (hasOwn(hash, key)) {
+			res[key] = hash[key];
+			if (!preserve) {
+				delete hash[key];
+			}
+			return true
+		} else if (hasOwn(hash, altKey)) {
+			res[key] = hash[altKey];
+			if (!preserve) {
+				delete hash[altKey];
+			}
+			return true
+		}
+	}
+	return false
+}
+```
+
+如果 attrs 或者 props 没有值，那么就会直接返回 false；如果存在，就有可能出现两种情况：
+
+第一种是使用 :parentMessage="message" 这种形式绑定属性，那么就会匹配第一个分支，执行 res['parentMessage'] = attrs['parentMessage'];第二种就是 demo 的这种形式，执行 res['parentMessage'] = attrs['parent-message']。
 
 propsData 就是最后返回的 res。
 

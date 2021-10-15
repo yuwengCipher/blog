@@ -598,7 +598,7 @@ const Foo = {
 }
 ```
 
-既然提供了这些守卫，那它们的执行顺序是什么呢？官网也提供了守卫的执行流，如下：
+既然提供了这些守卫，那它们的执行顺序是什么呢？官网也提供了守卫的执行流，表现如下：
 1. Navigation triggered
 2. beforeRouteLeave in deactived components
 3. beforeEach
@@ -620,7 +620,7 @@ History.prototype.transitionTo = function transitionTo (){
 }
 ```
 
-实际执行的是 confirmTransition，即：
+它内部实际执行的是 confirmTransition，即：
 
 ```js
 History.prototype.confirmTransition = function confirmTransition (route, onComplete, onAbort) {
@@ -659,7 +659,7 @@ History.prototype.confirmTransition = function confirmTransition (route, onCompl
 }
 ```
 
-可以看到，使用一个队列顺序存储需要执行的守卫方法及其他处理，然后去使用 runQueue 去执行，也就确保里面的处理时按顺序执行的。其中里面最后一个执行的是 reolve components，而 beforeRouteEnter 是在 runQueue 回调方法内执行 ，这也就确保它的执行是在 resolve components 之后。
+可以看到，使用一个队列顺序存储需要执行的守卫方法及其他处理，然后将这个队列传入 runQueue 去执行，就可以按顺序执行里面的处理。其中队列最后一个处理是 reolve components，而 beforeRouteEnter 是在 runQueue 回调方法内执行 ，这也就确保它的执行是在 resolve components 之后。
 
 ## 最后
 

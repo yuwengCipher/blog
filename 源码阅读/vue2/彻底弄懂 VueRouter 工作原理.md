@@ -468,11 +468,11 @@ var Link = {
 
 ## RouterView
 
-跟路由相关的内置指令还有 RouterView，但跟 RouterLink 不一样的是它不会渲染成某个标签，而是渲染成匹配到的组件，那何为匹配到的组件呢？路由是可以嵌套的，那么就会按照嵌套的层级进行分层，每一层的组件会被一个 RouterView 所维护渲染，默认只有一个根 RouterView。具体可查看[Vue Router](https://router.vuejs.org/zh/)。下面具体看看 RouterView 是如何渲染匹配组件吧。
+跟路由相关的内置指令还有 RouterView，但跟 RouterLink 不一样的是它不会渲染成某个标签，类似于 fragment，而是渲染成匹配到的组件，那何为匹配到的组件呢？路由是可以嵌套的，那么就会按照嵌套的层级进行分层，每一层的组件会被一个 RouterView 所维护渲染，默认只有一个根 RouterView。具体可查看[Vue Router](https://router.vuejs.org/zh/)。下面具体看看 RouterView 是如何渲染匹配组件吧。
 
 上面提到的路由实例挂载步骤第二步中，对根组件混入了 beforeCreate 钩子，其中在执行 router 的初始化方法时会默认调用一次 history.transitionTo 方法，而在该方法内部会确定当前的 route。
 
-第三步就是创建 Vue 实例，然后进行挂载。此过程在 [模板怎么变成真实DOM](https://djacipher.cn/2021/05/02/%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/vue2/%E6%A8%A1%E6%9D%BF%E6%80%8E%E4%B9%88%E5%8F%98%E6%88%90%E7%9C%9F%E5%AE%9E%20DOM/) 这篇文章中已经讲过，不在重复。我们在这里只需关注 render 方法（render 方法来自于例子 basic）
+第三步就是创建 Vue 实例，然后进行挂载。此过程在 [模板怎么变成真实DOM](https://djacipher.cn/2021/05/02/%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB/vue2/%E6%A8%A1%E6%9D%BF%E6%80%8E%E4%B9%88%E5%8F%98%E6%88%90%E7%9C%9F%E5%AE%9E%20DOM/) 这篇文章中已经讲过，不在重复。我们在这里只需关注涉及到的 render 方法（此 render 方法来自于例子 basic 处理后）
 
 ```js
 (function anonymous(
@@ -481,12 +481,12 @@ with(this){return _c('div',{attrs:{"id":"app"}},[_c('h1',[_v("Basic")]),_v(" "),
 })
 ```
 
-跟路由相关的主要有三处：
+render 方法跟路由相关的主要有三处：
 - _s($route.query.t)
 - _s($route.hash)
 - _c('router-view',{staticClass:"view"})
 
-其中前两块儿有一个共同的作用，那就是帮助 _route 完成依赖收集。
+其中前两块儿有一个共同的作用，那就是帮助 _route 完成依赖收集。为什么这样说呢？
 
 首先 VueRouter.install 做了两件事，一个是为 Vue.prototype 添加 $route 属性，并且为其添加 get 方法
 
@@ -546,6 +546,120 @@ ref 就是 RouterView 组件对象，这个例子中的 RouterView 处于根组�
 完成初次渲染之后，_route 也完成了 render watcher 的收集，之后不论是以哪一种方式去改变路由，都会触发 render，进而重新显示对应的组件。
 
 ![RouterView](https://coding-pages-bucket-3560923-8733773-16868-593524-1259394930.cos-website.ap-hongkong.myqcloud.com/blogImgs/RouterView.png)
+
+## 导航守卫
+
+Vue 提供的生命周期钩子让我们在开发程序时可以轻松自如的在不同时机处理不同的事情，同样的，VueRouter 也提供了各种钩子，这里称为导航守卫。依据声明的位置不同，可以分为全局级、路由级、组件级三种，它的主要作用是可以让我们去取消一次路由跳转或重定向路由。可以查看 [路由导航](https://router.vuejs.org/guide/advanced/navigation-guards.html)
+
+### 全局级
+
+这一层接在 router.js 中声明，分为 beforeEach、beforeResolve、afterEach，如：
+
+```js
+const router = new VueRouter({ ... })
+
+router.beforeEach((to, from, next) => {
+  if (to.query.delay) {
+    setTimeout(() => {
+      next()
+    }, Number(to.query.delay))
+  } else {
+    next()
+  }
+})
+```
+
+### 路由级
+
+路由级只有一个 beforeEnter，我们可以在每一个路由对象中去添加，如：
+
+```js
+const router = new VueRouter({
+  routes: [
+    {
+      path: '/foo',
+      component: Foo,
+      beforeEnter: (to, from, next) => {}
+    }
+  ]
+})
+```
+
+### 组件级
+
+组件级有三个守卫，即：beforeRouteEnter、beforeRouteUpdate、beforeRouteLeave。在组件中声明如下：
+
+```js
+const Foo = {
+  template: `...`,
+  beforeRouteEnter(to, from, next) {},
+  beforeRouteUpdate(to, from, next) {},
+  beforeRouteLeave(to, from, next) {}
+}
+```
+
+既然提供了这些守卫，那它们的执行顺序是什么呢？官网也提供了守卫的执行流，如下：
+1. Navigation triggered
+2. beforeRouteLeave in deactived components
+3. beforeEach
+4. beforeRouteUpdate in reused components
+5. beforeEnter
+6. resolve async component
+7. beforeRouteEnter in actived components
+8. beforeReolve
+9. Navigation confirmed
+10. afterEach
+11. DOM update triggered
+
+那是如何实现这样一种执行流顺序呢？应该记得我们上面说过，路由跳转底层执行的是 transitionTo 方法，
+
+```js
+History.prototype.transitionTo = function transitionTo (){
+	// 忽略
+	this.confirmTransition()
+}
+```
+
+实际执行的是 confirmTransition，即：
+
+```js
+History.prototype.confirmTransition = function confirmTransition (route, onComplete, onAbort) {
+	// 忽略
+	var queue = [].concat(
+		// in-component leave guards
+		extractLeaveGuards(deactivated),
+		// global before hooks
+		this.router.beforeHooks,
+		// in-component update hooks
+		extractUpdateHooks(updated),
+		// in-config enter guards
+		activated.map(function (m) { return m.beforeEnter; }),
+		// async components
+		resolveAsyncComponents(activated)
+	);
+
+	runQueue(queue, iterator, function () {
+		// wait until async components are resolved before
+		// extracting in-component enter guards
+		var enterGuards = extractEnterGuards(activated);
+		var queue = enterGuards.concat(this$1$1.router.resolveHooks);
+		runQueue(queue, iterator, function () {
+			if (this$1$1.pending !== route) {
+				return abort(createNavigationCancelledError(current, route))
+			}
+			this$1$1.pending = null;
+			onComplete(route);
+			if (this$1$1.router.app) {
+				this$1$1.router.app.$nextTick(function () {
+					handleRouteEntered(route);
+				});
+			}
+		});
+	});
+}
+```
+
+可以看到，使用一个队列顺序存储需要执行的守卫方法及其他处理，然后去使用 runQueue 去执行，也就确保里面的处理时按顺序执行的。其中里面最后一个执行的是 reolve components，而 beforeRouteEnter 是在 runQueue 回调方法内执行 ，这也就确保它的执行是在 resolve components 之后。
 
 ## 最后
 

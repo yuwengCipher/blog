@@ -19,7 +19,7 @@ SPA 应用可以理解成由一个中枢管理多个 route——>UI 映射集合
 
 ### url 历史记录管理
 
-按我的理解，浏览器设有一个栈和一个队列来管理 url 历史记录，当点击后退按钮，当前 url 会被弹出栈，此时不会被销毁，而是从队列头部进入进行存储；当点击前进按钮就会从队列中取出第一个 url 进栈显示。但是每当新的 url 键入地址栏中时，这个 url 就会入栈，并且队列里的 url 都会被销毁。如果队列中没有记录，前进按钮是置灰不能点击的。
+按我的理解，浏览器设有两个栈来管理 url 历史记录，一个是当前栈，一个是备用栈。当点击后退按钮，当前栈顶的 url 会被弹出栈，此时不会被销毁，而是进入备用栈中；当点击前进按钮就会从备用栈取出第一个 url 放入当前栈显示。但是每当新的 url 键入地址栏中并显示页面时，这个 url 就会存入当前栈，并且备用栈里的 url 都会被销毁。如果备用栈中没有记录，前进按钮是置灰不能点击的。
 
 ### hash
 
@@ -179,7 +179,7 @@ var VueRouter = function VueRouter (options) {
 
 通过构造函数可以看出，路由模式默认为 hash。并且根据不同的模式，会初始化不同的 History 实例。HTML5History 和 HashHistory 大致结构一样，内部都是继承自 History，只是各自拥有方法的处理细节不同，下面以 HashHistory 为例简单讲讲。
 
-首先了解一下 History 的基本组成构造。
+下面就是 History 的基本组成构造。
 
 ```js
 var History = function History (router, base) {
@@ -244,7 +244,7 @@ HashHistory.prototype.replace = function replace (location, onComplete, onAbort)
 
 ### new Vue({router})
 
-到这里开始创建 Vue 实例、挂载组件。传入的 router 实例对象被存放在 vue.$options.router 中。上面有提到过一点：在 VueRouter 的 install 方法中向 Vue 混入了 beforeCreate、destroyed 钩子函数。组件在创建时都会去执行 beforeCreate 这个钩子。
+到这里开始创建 Vue 实例、挂载组件。传入的 router 实例对象被存放在 vue.$options.router 中。上面有提到过一点：VueRouter 的 install 方法向 Vue 混入了 beforeCreate、destroyed 钩子函数，而组件在创建时都会去执行 beforeCreate 这个钩子。
 
 ```js
 beforeCreate: function beforeCreate () {
@@ -659,7 +659,7 @@ History.prototype.confirmTransition = function confirmTransition (route, onCompl
 }
 ```
 
-可以看到，使用一个队列顺序存储需要执行的守卫方法及其他处理，然后将这个队列传入 runQueue 去执行，就可以按顺序执行里面的处理。其中队列最后一个处理是 reolve components，而 beforeRouteEnter 是在 runQueue 回调方法内执行 ，这也就确保它的执行是在 resolve components 之后。
+可以看到，使用一个队列顺序存储需要执行的守卫方法及其他处理，然后使用 runQueue 去执行，就可以按顺序执行里面的处理。其中队列最后一个处理是 reolve components，而 beforeRouteEnter 是在 runQueue 回调方法内执行 ，这也就确保它的执行是在 resolve components 之后。
 
 ## 最后
 
